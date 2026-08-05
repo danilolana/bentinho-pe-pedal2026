@@ -1,8 +1,9 @@
 # Pé Pedal Bentinho — perguntas em movimento
 
 Site estático e responsivo para uma escuta pública durante o Pé Pedal
-Bentinho 2026, no Kartódromo do Taquaral. A experiência apresenta cinco
-perguntas sobre movimento, saúde e convivência no parque.
+Bentinho 2026, no Kartódromo Municipal Afrânio Ferreira Júnior. A experiência
+apresenta a história do circuito e cinco perguntas sobre movimento, saúde e
+convivência nesse espaço.
 
 ## Premissas
 
@@ -28,8 +29,9 @@ definidas como fallback.
 - `styles.css`: identidade visual, estados dos controles e responsividade.
 - `app.js`: configuração das perguntas, navegação, validação, persistência e
   tratamento de erros.
-- `assets/lagoa-taquaral-hero.webp`: imagem panorâmica autoral e otimizada usada
-  no hero.
+- `assets/kartodromo/`: imagens do circuito usadas no hero e no bloco histórico.
+- `docs/accessibility-image-audit.md`: razões de contraste, tratamento dos
+  assets e roteiro de validação.
 - `docs/concept.txt`: documentação conceitual fornecida.
 
 As perguntas ficam no array `questions`, no início de `app.js`. Novas perguntas
@@ -52,6 +54,9 @@ devem seguir um dos tipos já suportados: `radio`, `checkbox`, `range` ou
 - HTML semântico, `fieldset`/`legend`, região de erro com `role="alert"`,
   indicador de progresso e foco visível.
 - Animações respeitam `prefers-reduced-motion`.
+- Cores de texto atendem ao contraste mínimo WCAG 2.2 AA nos fundos definidos.
+- Imagens WebP possuem fallback JPEG, dimensões explícitas e carregamento
+  adiado fora da primeira dobra.
 
 ## Como executar
 

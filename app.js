@@ -13,8 +13,8 @@
     {
       id: "activity",
       kicker: "Seu movimento",
-      title: "O que trouxe você ao Taquaral hoje?",
-      help: "Escolha a atividade que melhor representa sua visita.",
+      title: "O que trouxe você ao Kartódromo hoje?",
+      help: "Escolha a atividade que melhor representa sua volta por aqui.",
       type: "radio",
       options: [
         "Caminhar",
@@ -29,7 +29,7 @@
     {
       id: "feeling",
       kicker: "Sua percepção",
-      title: "Como seu corpo costuma sair do parque?",
+      title: "Como seu corpo costuma sair deste circuito?",
       help: "Marque a sensação mais próxima da sua experiência.",
       type: "radio",
       options: [
@@ -43,8 +43,8 @@
     },
     {
       id: "priorities",
-      kicker: "Um parque melhor",
-      title: "O que mais ajudaria você a se movimentar por aqui?",
+      kicker: "Uma pista melhor",
+      title: "O que mais ajudaria você a se movimentar neste espaço?",
       help: "Escolha até 3 itens.",
       type: "checkbox",
       max: 3,
@@ -71,10 +71,10 @@
     {
       id: "suggestion",
       kicker: "Deixe sua marca",
-      title: "Que ideia faria mais pessoas aproveitarem o parque?",
+      title: "Que ideia faria mais pessoas aproveitarem o Kartódromo?",
       help: `Escreva entre ${MIN_TEXT_LENGTH} e ${MAX_TEXT_LENGTH} caracteres. Não inclua dados pessoais.`,
       type: "textarea",
-      placeholder: "Ex.: criar pontos de descanso perto das pistas...",
+      placeholder: "Ex.: criar pontos de descanso ao longo do circuito...",
       error: `Escreva uma ideia com pelo menos ${MIN_TEXT_LENGTH} caracteres.`,
     },
   ];
@@ -468,6 +468,12 @@
   elements.review.addEventListener("click", () => {
     state.current = 0;
     renderQuestion();
+  });
+
+  document.querySelectorAll("img[data-image-fallback]").forEach((image) => {
+    image.addEventListener("error", () => {
+      image.closest("figure")?.classList.add("is-unavailable");
+    });
   });
 
   renderQuestion();
