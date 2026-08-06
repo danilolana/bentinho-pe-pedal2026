@@ -470,11 +470,333 @@
     renderQuestion();
   });
 
+  function initializeCircuitMap() {
+    const map = document.querySelector("#circuit-map");
+    const svg = map?.querySelector(".circuit-blueprint");
+    const path = map?.querySelector("#main-circuit-path");
+    const marker = map?.querySelector("#circuit-marker");
+    const progressOutput = map?.querySelector("#circuit-progress");
+    const segmentOutput = map?.querySelector("#circuit-segment");
+    const statusOutput = map?.querySelector("#circuit-status");
+    const layerButtons = [
+      ...document.querySelectorAll(".map-layer-button[data-map-layer]"),
+    ];
+
+    if (!map || !svg || !path || !marker || !progressOutput || !segmentOutput) {
+      return;
+    }
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    );
+    const pathLength = path.getTotalLength();
+    const sampleCount = 220;
+    const samples = Array.from({ length: sampleCount + 1 }, (_, index) => {
+      const progress = index / sampleCount;
+      const point = path.getPointAtLength(progress * pathLength);
+      return { progress, x: point.x, y: point.y };
+    });
+
+    let currentProgress = 0.025;
+    let autoProgress = currentProgress;
+    let isExploring = false;
+    let isPointerDown = false;
+    let pointerFrame = 0;
+    let animationFrame = 0;
+    let lastAnimationTime = performance.now();
+    let lastSpokenBucket = -1;
+    let isMapVisible = true;
+    let visibilityObserver;
+
+    const segments = [
+      { end: 0.17, label: "Reta principal" },
+      { end: 0.39, label: "Miolo da pista" },
+      { end: 0.56, label: "Alça norte" },
+      { end: 0.77, label: "Alça leste" },
+      { end: 0.9, label: "Retorno central" },
+      { end: 1, label: "Chegada · Portão 6" },
+    ];
+
+    function getSegment(progress) {
+      return (
+        segments.find((segment) => progress <= segment.end) ??
+        segments[segments.length - 1]
+      ).label;
+    }
+
+    function positionMarker(progress, announce = false) {
+      const normalizedProgress = ((progress % 1) + 1) % 1;
+      const distance = normalizedProgress * pathLength;
+      const point = path.getPointAtLength(distance);
+      const nextPoint = path.getPointAtLength(
+        Math.min(pathLength, distance + 3),
+      );
+      const angle =
+        Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) *
+        (180 / Math.PI);
+      const percentage = Math.round(normalizedProgress * 100);
+      const segment = getSegment(normalizedProgress);
+
+      marker.setAttribute(
+        "transform",
+        `translate(${point.x} ${point.y}) rotate(${angle})`,
+      );
+      progressOutput.textContent = `${String(percentage).padStart(2, "0")}%`;
+      segmentOutput.textContent = segment;
+      currentProgress = normalizedProgress;
+
+      const spokenBucket = Math.round(percentage / 10);
+      if (
+        announce &&
+        statusOutput &&
+        spokenBucket !== lastSpokenBucket
+      ) {
+        statusOutput.textContent = `${percentage}% da volta. ${segment}.`;
+        lastSpokenBucket = spokenBucket;
+      }
+    }
+
+    function setLayer(layer, announce = false) {
+      map.dataset.layer = layer;
+      layerButtons.forEach((button) => {
+        const isActive = button.dataset.mapLayer === layer;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+
+      if (announce && statusOutput) {
+        const activeButton = layerButtons.find(
+          (button) => button.dataset.mapLayer === layer,
+        );
+        statusOutput.textContent = `Camada ${activeButton?.textContent.trim() ?? layer} ativada.`;
+      }
+    }
+
+    function clientPointToSvg(clientX, clientY) {
+      const screenMatrix = svg.getScreenCTM();
+      if (screenMatrix) {
+        const svgPoint = svg.createSVGPoint();
+        svgPoint.x = clientX;
+        svgPoint.y = clientY;
+        return svgPoint.matrixTransform(screenMatrix.inverse());
+      }
+
+      const bounds = svg.getBoundingClientRect();
+      return {
+        x: ((clientX - bounds.left) / bounds.width) * 1000,
+        y: ((clientY - bounds.top) / bounds.height) * 680,
+      };
+    }
+
+    function findNearestProgress(point) {
+      let nearest = samples[0];
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      samples.forEach((sample) => {
+        const distance =
+          (sample.x - point.x) ** 2 + (sample.y - point.y) ** 2;
+        if (distance < nearestDistance) {
+          nearest = sample;
+          nearestDistance = distance;
+        }
+      });
+
+      const refinementSpan = 1 / sampleCount;
+      let bestProgress = nearest.progress;
+      for (let index = -8; index <= 8; index += 1) {
+        const candidateProgress = Math.max(
+          0,
+          Math.min(1, nearest.progress + (index / 8) * refinementSpan),
+        );
+        const candidate = path.getPointAtLength(
+          candidateProgress * pathLength,
+        );
+        const distance =
+          (candidate.x - point.x) ** 2 + (candidate.y - point.y) ** 2;
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          bestProgress = candidateProgress;
+        }
+      }
+
+      return bestProgress;
+    }
+
+    function exploreAt(clientX, clientY) {
+      const bounds = map.getBoundingClientRect();
+      const relativeX = Math.max(
+        0,
+        Math.min(1, (clientX - bounds.left) / bounds.width),
+      );
+      const relativeY = Math.max(
+        0,
+        Math.min(1, (clientY - bounds.top) / bounds.height),
+      );
+
+      map.style.setProperty("--map-x", `${relativeX * 100}%`);
+      map.style.setProperty("--map-y", `${relativeY * 100}%`);
+      map.style.setProperty("--tilt-y", `${(relativeX - 0.5) * 2.4}deg`);
+      map.style.setProperty("--tilt-x", `${(0.5 - relativeY) * 2.1}deg`);
+      positionMarker(
+        findNearestProgress(clientPointToSvg(clientX, clientY)),
+      );
+      autoProgress = currentProgress;
+    }
+
+    function queuePointerUpdate(event) {
+      const { clientX, clientY } = event;
+      if (pointerFrame) return;
+
+      pointerFrame = window.requestAnimationFrame(() => {
+        exploreAt(clientX, clientY);
+        pointerFrame = 0;
+      });
+    }
+
+    function beginExploring() {
+      isExploring = true;
+      map.classList.add("is-exploring");
+    }
+
+    function finishExploring() {
+      if (isPointerDown) return;
+      isExploring = false;
+      autoProgress = currentProgress;
+      map.classList.remove("is-exploring");
+      map.style.setProperty("--tilt-x", "0deg");
+      map.style.setProperty("--tilt-y", "0deg");
+    }
+
+    function animate(timestamp) {
+      animationFrame = 0;
+      if (!isMapVisible) return;
+
+      const elapsed = Math.min(timestamp - lastAnimationTime, 64);
+      lastAnimationTime = timestamp;
+
+      if (!isExploring && !reducedMotion.matches) {
+        autoProgress = (autoProgress + elapsed * 0.000034) % 1;
+        positionMarker(autoProgress);
+      }
+
+      animationFrame = window.requestAnimationFrame(animate);
+    }
+
+    function startAnimation() {
+      if (animationFrame || !isMapVisible) return;
+      lastAnimationTime = performance.now();
+      animationFrame = window.requestAnimationFrame(animate);
+    }
+
+    map.addEventListener("pointerenter", (event) => {
+      if (event.pointerType === "mouse") {
+        beginExploring();
+        queuePointerUpdate(event);
+      }
+    });
+
+    map.addEventListener("pointermove", (event) => {
+      if (event.pointerType === "mouse" || isPointerDown) {
+        beginExploring();
+        queuePointerUpdate(event);
+      }
+    });
+
+    map.addEventListener("pointerleave", finishExploring);
+
+    map.addEventListener("pointerdown", (event) => {
+      isPointerDown = true;
+      beginExploring();
+      map.setPointerCapture(event.pointerId);
+      queuePointerUpdate(event);
+    });
+
+    map.addEventListener("pointerup", (event) => {
+      isPointerDown = false;
+      if (map.hasPointerCapture(event.pointerId)) {
+        map.releasePointerCapture(event.pointerId);
+      }
+      finishExploring();
+    });
+
+    map.addEventListener("pointercancel", () => {
+      isPointerDown = false;
+      finishExploring();
+    });
+
+    map.addEventListener("keydown", (event) => {
+      const keySteps = {
+        ArrowRight: 0.012,
+        ArrowDown: 0.012,
+        ArrowLeft: -0.012,
+        ArrowUp: -0.012,
+        PageDown: 0.08,
+        PageUp: -0.08,
+      };
+
+      if (event.key in keySteps) {
+        event.preventDefault();
+        positionMarker(currentProgress + keySteps[event.key], true);
+        autoProgress = currentProgress;
+        return;
+      }
+
+      if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        positionMarker(event.key === "Home" ? 0 : 0.995, true);
+        autoProgress = currentProgress;
+      }
+    });
+
+    layerButtons.forEach((button) => {
+      const selectLayer = (announce) =>
+        setLayer(button.dataset.mapLayer, announce);
+
+      button.addEventListener("pointerenter", (event) => {
+        if (event.pointerType === "mouse") selectLayer(false);
+      });
+      button.addEventListener("focus", () => selectLayer(false));
+      button.addEventListener("click", () => selectLayer(true));
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      lastAnimationTime = performance.now();
+    });
+
+    window.addEventListener("pagehide", () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.cancelAnimationFrame(pointerFrame);
+      visibilityObserver?.disconnect();
+    });
+
+    positionMarker(currentProgress);
+
+    if ("IntersectionObserver" in window) {
+      isMapVisible = false;
+      visibilityObserver = new IntersectionObserver(
+        ([entry]) => {
+          isMapVisible = entry.isIntersecting;
+          if (isMapVisible) {
+            startAnimation();
+          } else {
+            window.cancelAnimationFrame(animationFrame);
+            animationFrame = 0;
+          }
+        },
+        { rootMargin: "120px 0px", threshold: 0.01 },
+      );
+      visibilityObserver.observe(map);
+    } else {
+      startAnimation();
+    }
+  }
+
   document.querySelectorAll("img[data-image-fallback]").forEach((image) => {
     image.addEventListener("error", () => {
       image.closest("figure")?.classList.add("is-unavailable");
     });
   });
 
+  initializeCircuitMap();
   renderQuestion();
 })();

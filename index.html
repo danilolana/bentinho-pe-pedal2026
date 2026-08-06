@@ -290,6 +290,268 @@
           </figcaption>
         </figure>
       </section>
+
+      <section
+        class="circuit-section"
+        id="circuito"
+        aria-labelledby="circuit-title"
+      >
+        <div class="circuit-intro">
+          <p class="circuit-kicker">
+            <span aria-hidden="true"></span>
+            22°53' S · 47°03' O
+          </p>
+          <h2 id="circuit-title">
+            A pista responde<br />
+            <em>ao seu movimento.</em>
+          </h2>
+          <p class="circuit-description">
+            Um retrato vivo do antigo Kartódromo do Taquaral. Passe o cursor
+            sobre o mapa — ou arraste no celular — para percorrer o ponto mais
+            próximo do traçado.
+          </p>
+
+          <div class="map-layer-controls" aria-label="Camadas do mapa">
+            <button
+              class="map-layer-button is-active"
+              type="button"
+              data-map-layer="track"
+              aria-pressed="true"
+            >
+              <span>01</span> Traçado
+            </button>
+            <button
+              class="map-layer-button"
+              type="button"
+              data-map-layer="movement"
+              aria-pressed="false"
+            >
+              <span>02</span> Movimento
+            </button>
+            <button
+              class="map-layer-button"
+              type="button"
+              data-map-layer="memory"
+              aria-pressed="false"
+            >
+              <span>03</span> Memória
+            </button>
+          </div>
+
+          <div class="circuit-facts" aria-label="Dados do local">
+            <p><strong>1 km</strong><span>volta completa</span></p>
+            <p><strong>1973</strong><span>início da pista</span></p>
+            <p><strong>Portão 6</strong><span>acesso ao espaço</span></p>
+          </div>
+        </div>
+
+        <div
+          class="circuit-map"
+          id="circuit-map"
+          data-layer="track"
+          tabindex="0"
+          role="application"
+          aria-label="Mapa interativo do circuito do antigo Kartódromo do Taquaral. Use o mouse, toque ou as setas para percorrer a pista."
+        >
+          <div class="map-photo-layer" aria-hidden="true"></div>
+          <div class="map-light" aria-hidden="true"></div>
+
+          <svg
+            class="circuit-blueprint"
+            viewBox="0 0 1000 680"
+            role="img"
+            aria-labelledby="map-svg-title map-svg-description"
+          >
+            <title id="map-svg-title">
+              Traçado ilustrado do Kartódromo do Taquaral
+            </title>
+            <desc id="map-svg-description">
+              Mapa vetorial com a reta principal, o miolo e as alças do antigo
+              circuito, entre a avenida Doutor Heitor Penteado e o Parque
+              Portugal.
+            </desc>
+
+            <defs>
+              <linearGradient id="map-ground" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#31583e"></stop>
+                <stop offset=".58" stop-color="#244832"></stop>
+                <stop offset="1" stop-color="#183826"></stop>
+              </linearGradient>
+              <linearGradient id="route-glow" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0" stop-color="#ffc36e"></stop>
+                <stop offset=".45" stop-color="#ef7655"></stop>
+                <stop offset="1" stop-color="#bfe9b5"></stop>
+              </linearGradient>
+              <filter id="route-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow
+                  dx="0"
+                  dy="6"
+                  stdDeviation="8"
+                  flood-color="#081b11"
+                  flood-opacity=".55"
+                ></feDropShadow>
+              </filter>
+              <filter id="marker-glow" x="-100%" y="-100%" width="300%" height="300%">
+                <feDropShadow
+                  dx="0"
+                  dy="0"
+                  stdDeviation="9"
+                  flood-color="#ffc36e"
+                  flood-opacity=".82"
+                ></feDropShadow>
+              </filter>
+              <pattern id="map-grid" width="54" height="54" patternUnits="userSpaceOnUse">
+                <path
+                  d="M54 0H0V54"
+                  fill="none"
+                  stroke="#d8e9d6"
+                  stroke-opacity=".065"
+                  stroke-width="1"
+                ></path>
+              </pattern>
+              <path
+                id="main-circuit-path"
+                d="M170 565
+                  C222 533 258 486 316 459
+                  C358 439 418 447 448 410
+                  C478 373 457 339 480 307
+                  C501 278 539 281 552 312
+                  C566 347 540 381 511 379
+                  C480 377 469 345 482 314
+                  C498 276 545 237 570 201
+                  C592 168 574 128 605 105
+                  C634 83 674 102 684 140
+                  C695 181 670 220 681 251
+                  C691 279 722 286 755 281
+                  C798 274 826 296 827 333
+                  C828 370 803 396 769 393
+                  C735 390 713 361 727 334
+                  C741 307 778 303 805 324
+                  C840 351 853 399 826 430
+                  C798 463 746 454 706 428
+                  C668 403 634 402 607 428
+                  C575 458 546 486 499 490
+                  C451 494 423 470 386 478
+                  C348 486 327 519 300 551
+                  C266 591 211 621 177 598
+                  C159 586 155 575 170 565Z"
+              ></path>
+            </defs>
+
+            <rect width="1000" height="680" fill="url(#map-ground)"></rect>
+            <rect width="1000" height="680" fill="url(#map-grid)"></rect>
+
+            <g class="terrain-layer" aria-hidden="true">
+              <path
+                class="park-shape"
+                d="M34 616C149 570 176 416 224 294S321 66 469 26H984V634C849 608 773 630 641 641S356 616 34 616Z"
+              ></path>
+              <path
+                class="map-road map-road-west"
+                d="M78 706C86 588 115 471 173 339S274 109 354-40"
+              ></path>
+              <path
+                class="map-road map-road-south"
+                d="M-54 679C183 617 372 643 566 633S816 577 1064 493"
+              ></path>
+              <g class="contours">
+                <path d="M358 78C456 24 593 25 692 62S853 125 983 84"></path>
+                <path d="M304 132C419 82 536 78 642 108S823 185 983 135"></path>
+                <path d="M269 200C391 146 515 141 619 171S801 247 951 205"></path>
+                <path d="M228 283C356 229 478 224 576 255S739 324 916 278"></path>
+                <path d="M187 369C311 317 429 313 537 343S732 412 881 367"></path>
+                <path d="M147 451C277 403 394 395 501 430S677 502 842 459"></path>
+                <path d="M113 526C236 487 349 482 461 513S636 576 793 542"></path>
+              </g>
+              <g class="tree-clusters">
+                <circle cx="390" cy="106" r="17"></circle>
+                <circle cx="422" cy="83" r="11"></circle>
+                <circle cx="465" cy="112" r="21"></circle>
+                <circle cx="892" cy="145" r="25"></circle>
+                <circle cx="925" cy="178" r="17"></circle>
+                <circle cx="888" cy="205" r="12"></circle>
+                <circle cx="168" cy="386" r="19"></circle>
+                <circle cx="135" cy="430" r="13"></circle>
+                <circle cx="914" cy="476" r="22"></circle>
+                <circle cx="867" cy="501" r="15"></circle>
+              </g>
+            </g>
+
+            <g class="map-labels" aria-hidden="true">
+              <text x="75" y="373" transform="rotate(-64 75 373)">
+                AV. DR. HEITOR PENTEADO
+              </text>
+              <text x="696" y="616" transform="rotate(-11 696 616)">
+                PARQUE PORTUGAL
+              </text>
+              <g class="location-pin" transform="translate(206 499)">
+                <circle r="18"></circle>
+                <path d="M0-9a7 7 0 0 1 7 7C7 3 0 11 0 11S-7 3-7-2a7 7 0 0 1 7-7Z"></path>
+              </g>
+              <text class="gate-label" x="230" y="506">PORTÃO 6</text>
+              <text class="north-label" x="924" y="64">N</text>
+              <path class="north-arrow" d="M931 78 924 54l-7 24 7-5Z"></path>
+            </g>
+
+            <g class="movement-layer" aria-hidden="true">
+              <circle class="heat heat-one" cx="279" cy="526" r="82"></circle>
+              <circle class="heat heat-two" cx="528" cy="318" r="92"></circle>
+              <circle class="heat heat-three" cx="762" cy="355" r="102"></circle>
+              <circle class="heat heat-four" cx="616" cy="138" r="74"></circle>
+            </g>
+
+            <g class="track-layer" filter="url(#route-shadow)">
+              <use class="circuit-asphalt" href="#main-circuit-path"></use>
+              <use class="circuit-edge" href="#main-circuit-path"></use>
+              <use class="circuit-center" href="#main-circuit-path"></use>
+              <path
+                class="circuit-secondary"
+                d="M323 459C300 420 309 386 341 365
+                  C369 347 420 359 448 410
+                  M570 201C628 233 641 278 607 316
+                  M706 428C675 460 627 469 584 444"
+              ></path>
+              <path class="start-line" d="M190 548 218 593"></path>
+            </g>
+
+            <g class="circuit-marker" id="circuit-marker" aria-hidden="true">
+              <circle class="marker-pulse" r="25"></circle>
+              <circle class="marker-body" r="11"></circle>
+              <path class="marker-arrow" d="M2-5 15 0 2 5Z"></path>
+            </g>
+          </svg>
+
+          <div class="map-hud" aria-hidden="true">
+            <p><span>VOLTA / POSIÇÃO</span><strong id="circuit-progress">00%</strong></p>
+            <p><span>TRECHO</span><strong id="circuit-segment">Reta principal</strong></p>
+          </div>
+
+          <div class="map-gesture" aria-hidden="true">
+            <span class="gesture-dot"></span>
+            <span>mova para explorar</span>
+          </div>
+
+          <p class="sr-only" id="circuit-status" aria-live="polite">
+            Percurso automático iniciado.
+          </p>
+        </div>
+
+        <div class="circuit-caption">
+          <p>
+            <span>Local</span>
+            Espaço Afrânio Ferreira Júnior<br />
+            Parque Taquaral · Campinas, SP
+          </p>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=Pista+Taquaral+ex+kartodromo+Campinas"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Abrir localização
+            <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
     </main>
 
     <footer>

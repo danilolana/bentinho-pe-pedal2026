@@ -25,10 +25,10 @@ definidas como fallback.
 
 ## Estrutura
 
-- `index.html`: conteúdo semântico, formulário e regiões acessíveis.
-- `styles.css`: identidade visual, estados dos controles e responsividade.
-- `app.js`: configuração das perguntas, navegação, validação, persistência e
-  tratamento de erros.
+- `index.html`: conteúdo semântico, formulário, mapa vetorial e regiões acessíveis.
+- `styles.css`: identidade visual, estados dos controles, animações e responsividade.
+- `app.js`: configuração das perguntas, navegação, validação, persistência,
+  tratamento de erros e interação com o circuito.
 - `assets/kartodromo/`: imagens do circuito usadas no hero e no bloco histórico.
 - `docs/accessibility-image-audit.md`: razões de contraste, tratamento dos
   assets e roteiro de validação.
@@ -45,6 +45,9 @@ devem seguir um dos tipos já suportados: `radio`, `checkbox`, `range` ou
 - Identidade de natureza urbana baseada em verde-folha, azul-lago, terracota e
   areia, com formas curvas inspiradas nos caminhos e na água.
 - Barra de progresso e retorno à pergunta anterior sem perda das respostas.
+- Mapa autoral do traçado com camadas de pista, movimento e memória; o marcador
+  segue o ponto mais próximo do cursor, responde a toque e pode ser conduzido
+  pelo teclado.
 - Validação em cada etapa, com mensagens específicas e foco levado ao campo
   problemático.
 - Resumo final criado com `textContent`, evitando injeção de HTML por entradas
