@@ -87,6 +87,7 @@
     next: document.querySelector("#next-button"),
     clear: document.querySelector("#clear-button"),
     review: document.querySelector("#review-button"),
+    certificate: document.querySelector("#certificate-button"),
     completion: document.querySelector("#completion"),
     summary: document.querySelector("#answer-summary"),
     stepLabel: document.querySelector("#step-label"),
@@ -101,6 +102,7 @@
     completed: false,
   };
   let toastTimer;
+  let certificateExperience;
 
   function loadAnswers() {
     try {
@@ -389,6 +391,7 @@
     elements.completion.hidden = false;
     renderSummary();
     elements.completion.focus();
+    certificateExperience?.open(true);
   }
 
   function renderSummary() {
@@ -427,6 +430,7 @@
     }
 
     state = { current: 0, answers: {}, completed: false };
+    certificateExperience?.reset();
     renderQuestion();
     showToast("Respostas apagadas. O percurso recomeçou.");
   }
@@ -469,6 +473,697 @@
     state.current = 0;
     renderQuestion();
   });
+
+  function initializeCertificateExperience() {
+    const dialog = document.querySelector("#camera-dialog");
+    const closeButton = document.querySelector("#camera-close");
+    const cameraStep = document.querySelector("#camera-step");
+    const certificateStep = document.querySelector("#certificate-step");
+    const viewfinder = document.querySelector("#camera-viewfinder");
+    const video = document.querySelector("#camera-video");
+    const preview = document.querySelector("#camera-preview");
+    const photoCanvas = document.querySelector("#photo-canvas");
+    const cameraStatus = document.querySelector("#camera-status");
+    const startButton = document.querySelector("#camera-start");
+    const captureButton = document.querySelector("#camera-capture");
+    const retakeButton = document.querySelector("#camera-retake");
+    const fileInput = document.querySelector("#camera-file");
+    const fileButton = document.querySelector(".photo-file-button");
+    const detailsForm = document.querySelector("#certificate-details");
+    const nameInput = document.querySelector("#certificate-name");
+    const faceConfirmation = document.querySelector("#face-confirmation");
+    const certificateError = document.querySelector("#certificate-error");
+    const certificateImage = document.querySelector("#certificate-image");
+    const printButton = document.querySelector("#certificate-print");
+    const downloadButton = document.querySelector("#certificate-download");
+    const shareButton = document.querySelector("#certificate-share");
+    const backButton = document.querySelector("#certificate-back");
+
+    const requiredElements = [
+      dialog,
+      closeButton,
+      cameraStep,
+      certificateStep,
+      viewfinder,
+      video,
+      preview,
+      photoCanvas,
+      cameraStatus,
+      startButton,
+      captureButton,
+      retakeButton,
+      fileInput,
+      fileButton,
+      detailsForm,
+      nameInput,
+      faceConfirmation,
+      certificateError,
+      certificateImage,
+      printButton,
+      downloadButton,
+      shareButton,
+      backButton,
+      elements.certificate,
+    ];
+
+    if (requiredElements.some((element) => !element)) {
+      return {
+        open: () => {},
+        reset: () => {},
+      };
+    }
+
+    const certificateCanvas = document.createElement("canvas");
+    certificateCanvas.width = 1600;
+    certificateCanvas.height = 1131;
+
+    let cameraStream = null;
+    let photoDataUrl = "";
+    let certificateDataUrl = "";
+    let certificateFileName = "certificado-pe-pedal-bentinho-2026.png";
+    let cameraRequestId = 0;
+
+    function stopCamera() {
+      cameraRequestId += 1;
+      cameraStream?.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+      video.srcObject = null;
+    }
+
+    function setCameraStatus(message, isError = false) {
+      cameraStatus.textContent = message;
+      viewfinder.classList.toggle("has-error", isError);
+      viewfinder.classList.remove("is-ready");
+    }
+
+    function showCameraError(error) {
+      let message =
+        "Não foi possível abrir a câmera. Você pode tentar novamente ou usar uma foto do aparelho.";
+
+      if (!window.isSecureContext) {
+        message =
+          "A câmera exige HTTPS ou localhost. Abra o site em uma conexão segura ou use uma foto do aparelho.";
+      } else if (error?.name === "NotAllowedError") {
+        message =
+          "O acesso à câmera foi bloqueado. Libere a permissão no navegador e tente novamente.";
+      } else if (error?.name === "NotFoundError") {
+        message =
+          "Nenhuma câmera foi encontrada neste aparelho. Use uma foto do aparelho.";
+      } else if (error?.name === "NotReadableError") {
+        message =
+          "A câmera está sendo usada por outro aplicativo. Feche-o e tente novamente.";
+      }
+
+      setCameraStatus(message, true);
+      startButton.hidden = false;
+      captureButton.disabled = true;
+    }
+
+    async function requestCamera() {
+      stopCamera();
+      const requestId = ++cameraRequestId;
+      preview.hidden = true;
+      video.hidden = false;
+      viewfinder.classList.remove("has-photo", "has-error");
+      setCameraStatus("Solicitando acesso à câmera…");
+      startButton.hidden = true;
+      captureButton.hidden = false;
+      captureButton.disabled = true;
+      retakeButton.hidden = true;
+      fileButton.hidden = false;
+      detailsForm.hidden = true;
+
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new DOMException(
+            "A captura de câmera não está disponível.",
+            "NotSupportedError",
+          );
+        }
+
+        const requestedStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 1920 },
+          },
+        });
+        if (requestId !== cameraRequestId) {
+          requestedStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        cameraStream = requestedStream;
+        video.srcObject = cameraStream;
+        await video.play();
+        captureButton.disabled = false;
+        viewfinder.classList.add("is-ready");
+        cameraStatus.textContent =
+          "Câmera pronta. Centralize o rosto e tire a foto.";
+      } catch (error) {
+        if (requestId !== cameraRequestId) return;
+        console.warn("Não foi possível iniciar a câmera.", error);
+        showCameraError(error);
+      }
+    }
+
+    function drawCoverImage(context, source, mirror = false) {
+      const sourceWidth = source.videoWidth || source.naturalWidth || source.width;
+      const sourceHeight =
+        source.videoHeight || source.naturalHeight || source.height;
+      const targetWidth = photoCanvas.width;
+      const targetHeight = photoCanvas.height;
+      const sourceRatio = sourceWidth / sourceHeight;
+      const targetRatio = targetWidth / targetHeight;
+      let cropWidth = sourceWidth;
+      let cropHeight = sourceHeight;
+      let cropX = 0;
+      let cropY = 0;
+
+      if (sourceRatio > targetRatio) {
+        cropWidth = sourceHeight * targetRatio;
+        cropX = (sourceWidth - cropWidth) / 2;
+      } else {
+        cropHeight = sourceWidth / targetRatio;
+        cropY = (sourceHeight - cropHeight) / 2;
+      }
+
+      context.save();
+      context.clearRect(0, 0, targetWidth, targetHeight);
+      if (mirror) {
+        context.translate(targetWidth, 0);
+        context.scale(-1, 1);
+      }
+      context.drawImage(
+        source,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        targetWidth,
+        targetHeight,
+      );
+      context.restore();
+    }
+
+    function showCapturedPhoto() {
+      photoDataUrl = photoCanvas.toDataURL("image/jpeg", 0.9);
+      preview.src = photoDataUrl;
+      preview.hidden = false;
+      video.hidden = true;
+      viewfinder.classList.add("has-photo");
+      viewfinder.classList.remove("is-ready", "has-error");
+      captureButton.hidden = true;
+      startButton.hidden = true;
+      retakeButton.hidden = false;
+      fileButton.hidden = true;
+      detailsForm.hidden = false;
+      certificateError.hidden = true;
+      stopCamera();
+      window.setTimeout(() => nameInput.focus(), 100);
+    }
+
+    function capturePhoto() {
+      if (!video.videoWidth || !video.videoHeight) {
+        setCameraStatus("A câmera ainda está preparando a imagem. Tente novamente.");
+        return;
+      }
+
+      const context = photoCanvas.getContext("2d", { alpha: false });
+      drawCoverImage(context, video, true);
+      showCapturedPhoto();
+    }
+
+    async function loadPhotoFile(file) {
+      if (!file?.type.startsWith("image/")) {
+        showCameraError({ name: "InvalidFile" });
+        setCameraStatus("Escolha um arquivo de imagem válido.", true);
+        return;
+      }
+
+      if (file.size > 15 * 1024 * 1024) {
+        setCameraStatus("Escolha uma foto com até 15 MB.", true);
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+
+      try {
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = objectUrl;
+        });
+        const context = photoCanvas.getContext("2d", { alpha: false });
+        drawCoverImage(context, image, false);
+        showCapturedPhoto();
+      } catch (error) {
+        console.warn("Não foi possível ler a foto escolhida.", error);
+        setCameraStatus("Não foi possível ler essa foto. Escolha outra imagem.", true);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+        fileInput.value = "";
+      }
+    }
+
+    function resetCapture() {
+      photoDataUrl = "";
+      certificateDataUrl = "";
+      photoCanvas
+        .getContext("2d")
+        .clearRect(0, 0, photoCanvas.width, photoCanvas.height);
+      certificateCanvas
+        .getContext("2d")
+        .clearRect(0, 0, certificateCanvas.width, certificateCanvas.height);
+      preview.removeAttribute("src");
+      preview.hidden = true;
+      detailsForm.reset();
+      detailsForm.hidden = true;
+      certificateError.hidden = true;
+      certificateImage.removeAttribute("src");
+      cameraStep.hidden = false;
+      certificateStep.hidden = true;
+      requestCamera();
+    }
+
+    function roundedRectPath(context, x, y, width, height, radius) {
+      const corner = Math.min(radius, width / 2, height / 2);
+      context.beginPath();
+      context.moveTo(x + corner, y);
+      context.lineTo(x + width - corner, y);
+      context.quadraticCurveTo(x + width, y, x + width, y + corner);
+      context.lineTo(x + width, y + height - corner);
+      context.quadraticCurveTo(
+        x + width,
+        y + height,
+        x + width - corner,
+        y + height,
+      );
+      context.lineTo(x + corner, y + height);
+      context.quadraticCurveTo(x, y + height, x, y + height - corner);
+      context.lineTo(x, y + corner);
+      context.quadraticCurveTo(x, y, x + corner, y);
+      context.closePath();
+    }
+
+    function wrapCanvasText(context, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(/\s+/);
+      const lines = [];
+      let currentLine = "";
+
+      words.forEach((word) => {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (context.measureText(testLine).width > maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      });
+      if (currentLine) lines.push(currentLine);
+
+      lines.forEach((line, index) => {
+        context.fillText(line, x, y + index * lineHeight);
+      });
+      return y + lines.length * lineHeight;
+    }
+
+    function fitNameFont(context, name, maxWidth) {
+      let fontSize = 64;
+      do {
+        context.font = `600 ${fontSize}px Manrope, Arial, sans-serif`;
+        fontSize -= 2;
+      } while (context.measureText(name).width > maxWidth && fontSize > 38);
+    }
+
+    async function drawCertificate(name) {
+      await document.fonts?.ready;
+      const context = certificateCanvas.getContext("2d", { alpha: false });
+      const width = certificateCanvas.width;
+      const height = certificateCanvas.height;
+      const date = new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }).format(new Date());
+
+      context.fillStyle = "#f2ebdd";
+      context.fillRect(0, 0, width, height);
+
+      context.fillStyle = "#203e29";
+      context.fillRect(0, 0, 270, height);
+
+      context.strokeStyle = "rgba(168, 201, 154, 0.16)";
+      context.lineWidth = 1;
+      for (let y = 0; y <= height; y += 56) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(width, y);
+        context.stroke();
+      }
+      for (let x = 0; x <= width; x += 56) {
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, height);
+        context.stroke();
+      }
+
+      context.save();
+      context.strokeStyle = "#b5543c";
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.lineWidth = 34;
+      context.beginPath();
+      context.moveTo(62, 955);
+      context.bezierCurveTo(154, 890, 83, 779, 167, 720);
+      context.bezierCurveTo(251, 660, 127, 564, 190, 485);
+      context.bezierCurveTo(248, 414, 128, 321, 198, 235);
+      context.bezierCurveTo(226, 199, 211, 151, 174, 125);
+      context.stroke();
+      context.strokeStyle = "#f2ebdd";
+      context.lineWidth = 3;
+      context.setLineDash([5, 13]);
+      context.stroke();
+      context.restore();
+
+      context.strokeStyle = "#315c3b";
+      context.lineWidth = 4;
+      context.strokeRect(22, 22, width - 44, height - 44);
+      context.strokeStyle = "rgba(181, 84, 60, 0.55)";
+      context.lineWidth = 2;
+      context.strokeRect(38, 38, width - 76, height - 76);
+
+      context.fillStyle = "#f2ebdd";
+      context.font = "700 24px Manrope, Arial, sans-serif";
+      context.textAlign = "center";
+      context.fillText("PÉ PEDAL", 135, 77);
+      context.font = "600 13px Inter, Arial, sans-serif";
+      context.letterSpacing = "3px";
+      context.fillText("BENTINHO 2026", 135, 105);
+      context.letterSpacing = "0px";
+
+      context.save();
+      context.translate(76, 1010);
+      context.rotate(-Math.PI / 2);
+      context.textAlign = "left";
+      context.fillStyle = "rgba(242, 235, 221, 0.58)";
+      context.font = "700 13px Inter, Arial, sans-serif";
+      context.fillText("KARTÓDROMO DO TAQUARAL · CAMPINAS", 0, 0);
+      context.restore();
+
+      context.textAlign = "left";
+      context.fillStyle = "#b5543c";
+      context.font = "700 15px Inter, Arial, sans-serif";
+      context.letterSpacing = "2px";
+      context.fillText("CERTIFICADO DE PARTICIPAÇÃO", 350, 135);
+      context.letterSpacing = "0px";
+
+      context.fillStyle = "#203e29";
+      context.font = "500 94px Manrope, Arial, sans-serif";
+      const certificateTitleLead = "Uma volta";
+      context.fillText(certificateTitleLead, 348, 240);
+      const certificateTitleOffset =
+        context.measureText(certificateTitleLead).width + 24;
+      context.font = "italic 500 86px Lora, Georgia, serif";
+      context.fillStyle = "#b5543c";
+      context.fillText("que fica.", 348 + certificateTitleOffset, 240);
+
+      context.fillStyle = "#59645d";
+      context.font = "500 22px Inter, Arial, sans-serif";
+      context.fillText("Certificamos que", 350, 350);
+
+      context.fillStyle = "#203e29";
+      fitNameFont(context, name, 690);
+      const nameBottom = wrapCanvasText(context, name, 348, 425, 690, 70);
+
+      context.fillStyle = "#59645d";
+      context.font = "400 24px Inter, Arial, sans-serif";
+      const bodyBottom = wrapCanvasText(
+        context,
+        "participou da escuta pública Pé Pedal Bentinho 2026 e deixou seu olhar no percurso do Espaço Afrânio Ferreira Júnior.",
+        350,
+        nameBottom + 42,
+        680,
+        37,
+      );
+
+      context.fillStyle = "#315c3b";
+      context.font = "700 14px Inter, Arial, sans-serif";
+      context.letterSpacing = "2px";
+      context.fillText("REGISTRO DE CHEGADA", 1130, 184);
+      context.letterSpacing = "0px";
+
+      roundedRectPath(context, 1125, 220, 330, 440, 54);
+      context.save();
+      context.clip();
+      context.drawImage(photoCanvas, 1125, 220, 330, 440);
+      context.restore();
+      context.strokeStyle = "#b5543c";
+      context.lineWidth = 5;
+      roundedRectPath(context, 1125, 220, 330, 440, 54);
+      context.stroke();
+
+      context.fillStyle = "#203e29";
+      context.font = "700 18px Manrope, Arial, sans-serif";
+      context.fillText("PÉ PEDAL BENTINHO", 1125, 705);
+      context.fillStyle = "#59645d";
+      context.font = "400 16px Inter, Arial, sans-serif";
+      context.fillText("Campinas · 2026", 1125, 733);
+
+      const metadataY = Math.max(bodyBottom + 95, 790);
+      context.strokeStyle = "rgba(49, 92, 59, 0.35)";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(350, metadataY);
+      context.lineTo(700, metadataY);
+      context.moveTo(760, metadataY);
+      context.lineTo(1030, metadataY);
+      context.stroke();
+
+      context.fillStyle = "#203e29";
+      context.font = "700 14px Inter, Arial, sans-serif";
+      context.fillText("PÉ PEDAL BENTINHO 2026", 350, metadataY + 30);
+      context.fillText(date.toUpperCase(), 760, metadataY + 30);
+      context.fillStyle = "#59645d";
+      context.font = "400 13px Inter, Arial, sans-serif";
+      context.fillText("Participação registrada", 350, metadataY + 52);
+      context.fillText("Campinas, SP", 760, metadataY + 52);
+
+      context.fillStyle = "#315c3b";
+      context.fillRect(270, 1008, width - 270, 123);
+      context.fillStyle = "#f2ebdd";
+      context.font = "600 16px Inter, Arial, sans-serif";
+      context.fillText(
+        "HISTÓRIAS QUE DÃO A VOLTA · KARTÓDROMO DO TAQUARAL",
+        350,
+        1078,
+      );
+      context.textAlign = "right";
+      context.fillStyle = "rgba(242, 235, 221, 0.68)";
+      context.font = "500 14px Inter, Arial, sans-serif";
+      context.fillText("Foto processada somente neste aparelho", 1510, 1078);
+
+      certificateDataUrl = certificateCanvas.toDataURL("image/png");
+      certificateImage.src = certificateDataUrl;
+      certificateFileName = `certificado-${name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 45) || "participante"}-pe-pedal-2026.png`;
+    }
+
+    function canvasToBlob() {
+      return new Promise((resolve, reject) => {
+        certificateCanvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Não foi possível criar o arquivo."));
+        }, "image/png");
+      });
+    }
+
+    function downloadCertificate() {
+      if (!certificateDataUrl) return;
+      const link = document.createElement("a");
+      link.href = certificateDataUrl;
+      link.download = certificateFileName;
+      link.click();
+      showToast("Certificado baixado em PNG.");
+    }
+
+    function printCertificate() {
+      if (!certificateDataUrl) return;
+      const printFrame = document.createElement("iframe");
+      printFrame.title = "Impressão do certificado";
+      printFrame.style.position = "fixed";
+      printFrame.style.width = "1px";
+      printFrame.style.height = "1px";
+      printFrame.style.opacity = "0";
+      printFrame.style.pointerEvents = "none";
+      document.body.append(printFrame);
+
+      const frameDocument = printFrame.contentDocument;
+      const style = frameDocument.createElement("style");
+      style.textContent =
+        "@page{size:A4 landscape;margin:0}html,body{margin:0;width:100%;height:100%;display:grid;place-items:center;background:#fff}img{width:100%;height:100%;object-fit:contain}";
+      const image = frameDocument.createElement("img");
+      image.alt = "Certificado Pé Pedal Bentinho 2026";
+      image.src = certificateDataUrl;
+      frameDocument.head.append(style);
+      frameDocument.body.append(image);
+      image.addEventListener("load", () => {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+        window.setTimeout(() => printFrame.remove(), 60000);
+      });
+    }
+
+    async function shareCertificate() {
+      if (!certificateDataUrl) return;
+
+      try {
+        const blob = await canvasToBlob();
+        const file = new File([blob], certificateFileName, {
+          type: "image/png",
+        });
+
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            title: "Meu certificado Pé Pedal Bentinho 2026",
+            text: "Completei o percurso de participação do Pé Pedal Bentinho 2026.",
+            files: [file],
+          });
+          return;
+        }
+
+        downloadCertificate();
+        showToast(
+          "O compartilhamento de arquivos não está disponível. O certificado foi baixado.",
+        );
+      } catch (error) {
+        if (error?.name !== "AbortError") {
+          console.warn("Não foi possível compartilhar o certificado.", error);
+          showToast("Não foi possível compartilhar. Tente baixar o certificado.");
+        }
+      }
+    }
+
+    async function submitCertificate(event) {
+      event.preventDefault();
+      const name = nameInput.value.replace(/\s+/g, " ").trim();
+
+      if (name.length < 2) {
+        certificateError.textContent =
+          "Digite o nome que deve aparecer no certificado.";
+        certificateError.hidden = false;
+        nameInput.focus();
+        return;
+      }
+
+      if (!faceConfirmation.checked) {
+        certificateError.textContent =
+          "Confirme que seu rosto aparece na foto para continuar.";
+        certificateError.hidden = false;
+        faceConfirmation.focus();
+        return;
+      }
+
+      certificateError.hidden = true;
+      const submitButton = detailsForm.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.textContent = "Gerando certificado…";
+
+      try {
+        await drawCertificate(name);
+        cameraStep.hidden = true;
+        certificateStep.hidden = false;
+        certificateStep.scrollIntoView({ block: "start" });
+        certificateStep.querySelector("h2")?.focus?.();
+      } catch (error) {
+        console.error("Não foi possível gerar o certificado.", error);
+        certificateError.textContent =
+          "Não foi possível gerar o certificado neste aparelho. Tente novamente.";
+        certificateError.hidden = false;
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML =
+          'Gerar certificado <span aria-hidden="true">↗</span>';
+      }
+    }
+
+    function open(autoStart = false) {
+      if (!dialog.open) dialog.showModal();
+      document.body.classList.add("has-open-dialog");
+
+      if (certificateDataUrl) {
+        cameraStep.hidden = true;
+        certificateStep.hidden = false;
+        return;
+      }
+
+      cameraStep.hidden = false;
+      certificateStep.hidden = true;
+      if (autoStart || !cameraStream) requestCamera();
+    }
+
+    function close() {
+      stopCamera();
+      document.body.classList.remove("has-open-dialog");
+      if (dialog.open) dialog.close();
+    }
+
+    function reset() {
+      stopCamera();
+      photoDataUrl = "";
+      certificateDataUrl = "";
+      certificateFileName = "certificado-pe-pedal-bentinho-2026.png";
+      detailsForm.reset();
+      preview.removeAttribute("src");
+      preview.hidden = true;
+      certificateImage.removeAttribute("src");
+      photoCanvas
+        .getContext("2d")
+        .clearRect(0, 0, photoCanvas.width, photoCanvas.height);
+      certificateCanvas
+        .getContext("2d")
+        .clearRect(0, 0, certificateCanvas.width, certificateCanvas.height);
+      cameraStep.hidden = false;
+      certificateStep.hidden = true;
+      detailsForm.hidden = true;
+      if (dialog.open) close();
+    }
+
+    captureButton.addEventListener("click", capturePhoto);
+    startButton.addEventListener("click", requestCamera);
+    retakeButton.addEventListener("click", resetCapture);
+    fileInput.addEventListener("change", () => loadPhotoFile(fileInput.files[0]));
+    detailsForm.addEventListener("submit", submitCertificate);
+    printButton.addEventListener("click", printCertificate);
+    downloadButton.addEventListener("click", downloadCertificate);
+    shareButton.addEventListener("click", shareCertificate);
+    backButton.addEventListener("click", resetCapture);
+    elements.certificate.addEventListener("click", () => open(true));
+    closeButton.addEventListener("click", close);
+
+    dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      close();
+    });
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) close();
+    });
+    dialog.addEventListener("close", () => {
+      stopCamera();
+      document.body.classList.remove("has-open-dialog");
+    });
+    window.addEventListener("pagehide", stopCamera);
+
+    return { open, reset };
+  }
 
   function initializeCircuitMap() {
     const map = document.querySelector("#circuit-map");
@@ -797,6 +1492,7 @@
     });
   });
 
+  certificateExperience = initializeCertificateExperience();
   initializeCircuitMap();
   renderQuestion();
 })();

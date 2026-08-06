@@ -77,7 +77,7 @@
           </p>
           <p>
             <span>Privacidade</span>
-            <strong>Sem dados pessoais</strong>
+            <strong>Tudo fica no aparelho</strong>
           </p>
         </div>
 
@@ -243,9 +243,14 @@
               lugar histórico de Campinas.
             </p>
             <div class="answer-summary" id="answer-summary"></div>
-            <button class="secondary-button" id="review-button" type="button">
-              Revisar respostas
-            </button>
+            <div class="completion-actions">
+              <button class="primary-button" id="certificate-button" type="button">
+                Criar meu certificado
+              </button>
+              <button class="secondary-button" id="review-button" type="button">
+                Revisar respostas
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -568,6 +573,191 @@
       <p>Feito para ouvir quem dá novas voltas no Kartódromo.</p>
       <a href="#inicio">Voltar ao início ↑</a>
     </footer>
+
+    <dialog
+      class="camera-dialog"
+      id="camera-dialog"
+      aria-labelledby="camera-dialog-title"
+    >
+      <div class="camera-dialog-shell">
+        <button
+          class="dialog-close"
+          id="camera-close"
+          type="button"
+          aria-label="Fechar criação do certificado"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+
+        <section class="camera-step" id="camera-step">
+          <div class="camera-copy">
+            <p class="camera-step-label">
+              <span>Última etapa</span>
+              Foto de chegada
+            </p>
+            <h2 id="camera-dialog-title">
+              Sua volta merece<br />
+              <em>um registro.</em>
+            </h2>
+            <p>
+              Vamos usar a câmera frontal para criar seu certificado. Enquadre
+              o rosto no guia e olhe para a lente.
+            </p>
+
+            <div class="camera-privacy">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 10V7a5 5 0 0 1 10 0v3"></path>
+                <rect x="4" y="10" width="16" height="11" rx="2"></rect>
+                <circle cx="12" cy="15.5" r="1.5"></circle>
+              </svg>
+              <p>
+                <strong>Privacidade local</strong>
+                Sua foto e seu nome não são enviados nem salvos nas respostas.
+                Eles existem apenas enquanto o certificado é criado.
+              </p>
+            </div>
+          </div>
+
+          <div class="camera-workspace">
+            <div class="camera-viewfinder" id="camera-viewfinder">
+              <video
+                id="camera-video"
+                autoplay
+                muted
+                playsinline
+                aria-label="Prévia da câmera frontal"
+              ></video>
+              <img
+                id="camera-preview"
+                alt="Prévia da foto capturada para o certificado"
+                hidden
+              />
+              <div class="face-guide" aria-hidden="true">
+                <span></span>
+              </div>
+              <div class="camera-corners" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <p class="camera-status" id="camera-status" role="status">
+                Solicitando acesso à câmera…
+              </p>
+            </div>
+
+            <canvas id="photo-canvas" width="900" height="1200" hidden></canvas>
+
+            <div class="camera-buttons" id="camera-buttons">
+              <button
+                class="secondary-button camera-start"
+                id="camera-start"
+                type="button"
+                hidden
+              >
+                Ativar câmera
+              </button>
+              <button
+                class="capture-button"
+                id="camera-capture"
+                type="button"
+                disabled
+              >
+                <span aria-hidden="true"></span>
+                Tirar foto
+              </button>
+              <button
+                class="secondary-button"
+                id="camera-retake"
+                type="button"
+                hidden
+              >
+                Tirar outra
+              </button>
+              <label class="photo-file-button" for="camera-file">
+                Usar foto do aparelho
+              </label>
+              <input
+                id="camera-file"
+                type="file"
+                accept="image/*"
+                capture="user"
+                hidden
+              />
+            </div>
+
+            <form class="certificate-details" id="certificate-details" hidden>
+              <label for="certificate-name">
+                Nome no certificado
+                <input
+                  id="certificate-name"
+                  name="certificate-name"
+                  type="text"
+                  maxlength="70"
+                  autocomplete="name"
+                  placeholder="Digite seu nome"
+                  required
+                />
+              </label>
+              <label class="face-confirmation">
+                <input id="face-confirmation" type="checkbox" required />
+                <span>Confirmo que meu rosto aparece na foto.</span>
+              </label>
+              <p class="certificate-error" id="certificate-error" role="alert" hidden></p>
+              <button class="primary-button" type="submit">
+                Gerar certificado
+                <span aria-hidden="true">↗</span>
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <section
+          class="certificate-step"
+          id="certificate-step"
+          aria-labelledby="certificate-title"
+          hidden
+        >
+          <div class="certificate-heading">
+            <div>
+              <p class="eyebrow">Volta concluída</p>
+              <h2 id="certificate-title" tabindex="-1">
+                Este percurso agora tem seu rosto.
+              </h2>
+            </div>
+            <p>
+              O certificado está pronto. Imprima, salve ou compartilhe direto
+              deste aparelho.
+            </p>
+          </div>
+
+          <figure class="certificate-result">
+            <img
+              id="certificate-image"
+              alt="Certificado de participação personalizado"
+            />
+          </figure>
+
+          <div class="certificate-actions">
+            <button class="certificate-action" id="certificate-print" type="button">
+              <span aria-hidden="true">⌁</span>
+              <strong>Imprimir</strong>
+              <small>Formato horizontal</small>
+            </button>
+            <button class="certificate-action" id="certificate-download" type="button">
+              <span aria-hidden="true">↓</span>
+              <strong>Baixar PNG</strong>
+              <small>Alta resolução</small>
+            </button>
+            <button class="certificate-action action-share" id="certificate-share" type="button">
+              <span aria-hidden="true">↗</span>
+              <strong>Compartilhar</strong>
+              <small>Enviar certificado</small>
+            </button>
+            <button class="text-button certificate-back" id="certificate-back" type="button">
+              Refazer foto
+            </button>
+          </div>
+        </section>
+      </div>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

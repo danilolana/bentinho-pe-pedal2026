@@ -12,6 +12,10 @@ convivência nesse espaço.
 - Esta primeira versão não possui servidor ou banco de dados.
 - As respostas são anônimas e ficam somente no `localStorage` do navegador.
   Portanto, não são compartilhadas entre dispositivos nem enviadas à escola.
+- O nome e a foto usados no certificado ficam apenas na memória da página,
+  não entram no `localStorage` e não são enviados a um servidor.
+- O acesso à câmera exige HTTPS ou `localhost`. Quando ele não está disponível,
+  a pessoa pode usar a opção de foto do aparelho.
 - O conteúdo foi elaborado a partir de `docs/concept.txt`.
 - Textos de resposta não aceitam links, e-mails ou telefones, reduzindo o risco
   de coleta acidental de dados pessoais.
@@ -25,10 +29,12 @@ definidas como fallback.
 
 ## Estrutura
 
-- `index.html`: conteúdo semântico, formulário, mapa vetorial e regiões acessíveis.
-- `styles.css`: identidade visual, estados dos controles, animações e responsividade.
+- `index.html`: conteúdo semântico, formulário, janela de câmera, certificado,
+  mapa vetorial e regiões acessíveis.
+- `styles.css`: identidade visual, estados dos controles, câmera, certificado,
+  animações e responsividade.
 - `app.js`: configuração das perguntas, navegação, validação, persistência,
-  tratamento de erros e interação com o circuito.
+  câmera, geração local do certificado e interação com o circuito.
 - `assets/kartodromo/`: imagens do circuito usadas no hero e no bloco histórico.
 - `docs/accessibility-image-audit.md`: razões de contraste, tratamento dos
   assets e roteiro de validação.
@@ -48,6 +54,9 @@ devem seguir um dos tipos já suportados: `radio`, `checkbox`, `range` ou
 - Mapa autoral do traçado com camadas de pista, movimento e memória; o marcador
   segue o ponto mais próximo do cursor, responde a toque e pode ser conduzido
   pelo teclado.
+- Após a última resposta, a câmera frontal é solicitada para uma foto de
+  chegada. O certificado é desenhado em Canvas com nome e foto, podendo ser
+  impresso, baixado em PNG ou compartilhado pela API nativa do aparelho.
 - Validação em cada etapa, com mensagens específicas e foco levado ao campo
   problemático.
 - Resumo final criado com `textContent`, evitando injeção de HTML por entradas
@@ -92,6 +101,10 @@ Depois acesse `http://localhost:8080`.
    apagados.
 10. Teste larguras de 320 px, 768 px e 1440 px, navegação somente por teclado e
     preferência do sistema por movimento reduzido.
+11. Conclua o questionário em HTTPS ou `localhost`, autorize a câmera, capture e
+    refaça a foto, preencha o nome e confirme a presença do rosto.
+12. Gere o certificado e teste impressão, download e compartilhamento. Bloqueie
+    a câmera para validar a mensagem de erro e a alternativa de foto do aparelho.
 
 ## Riscos e próximos ajustes
 
