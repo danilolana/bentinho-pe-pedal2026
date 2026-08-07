@@ -82,14 +82,27 @@
         </div>
 
         <figure class="hero-visual">
-          <img
-            src="assets/kartodromo/kartodromo-hero-reconstruido.jpg"
-            width="1536"
-            height="1024"
-            fetchpriority="high"
-            decoding="async"
-            alt="Ciclistas percorrem a curva vermelha da pista revitalizada do Kartódromo do Taquaral"
-          />
+          <!-- A variante menor evita transferir a foto de desktop em celulares. -->
+          <picture>
+            <source
+              media="(max-width: 640px)"
+              srcset="assets/kartodromo/kartodromo-hero-mobile.webp"
+              type="image/webp"
+            />
+            <source
+              media="(max-width: 1024px)"
+              srcset="assets/kartodromo/kartodromo-hero.webp"
+              type="image/webp"
+            />
+            <img
+              src="assets/kartodromo/kartodromo-hero-reconstruido.jpg"
+              width="1536"
+              height="1024"
+              fetchpriority="high"
+              decoding="async"
+              alt="Ciclistas percorrem a curva vermelha da pista revitalizada do Kartódromo do Taquaral"
+            />
+          </picture>
           <figcaption>
             <span>Kartódromo do Taquaral</span>
             <strong>Campinas, SP</strong>
@@ -296,15 +309,22 @@
         </div>
 
         <figure class="context-photo">
-          <img
-            src="assets/kartodromo/kartodromo-contexto-reconstruido.jpg"
-            width="1680"
-            height="934"
-            loading="lazy"
-            decoding="async"
-            data-image-fallback
-            alt="Vista panorâmica do traçado do Kartódromo Municipal Afrânio Ferreira Júnior ao fim da tarde"
-          />
+          <!-- WebP reduz o custo fora da primeira dobra; o JPEG permanece como fallback. -->
+          <picture>
+            <source
+              srcset="assets/kartodromo/kartodromo-contexto.webp"
+              type="image/webp"
+            />
+            <img
+              src="assets/kartodromo/kartodromo-contexto-reconstruido.jpg"
+              width="1680"
+              height="934"
+              loading="lazy"
+              decoding="async"
+              data-image-fallback
+              alt="Vista panorâmica do traçado do Kartódromo Municipal Afrânio Ferreira Júnior ao fim da tarde"
+            />
+          </picture>
           <figcaption>
             O traçado histórico continua reconhecível no espaço revitalizado.
           </figcaption>

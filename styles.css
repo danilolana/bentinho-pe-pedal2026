@@ -20,6 +20,7 @@
   --font-memory: "Lora", Georgia, serif;
 }
 
+/* Base fluida: impede que mídia e conteúdo intrínseco ampliem o viewport. */
 * {
   box-sizing: border-box;
 }
@@ -46,6 +47,13 @@ textarea {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 button {
@@ -797,7 +805,12 @@ button {
 }
 
 .text-button {
-  padding: 4px;
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -1139,8 +1152,13 @@ button {
   background: var(--leaf-dark);
 }
 
+.context-photo picture,
 .context-photo img {
+  display: block;
   width: 100%;
+}
+
+.context-photo img {
   height: clamp(300px, 43vw, 520px);
   object-fit: cover;
 }
@@ -2428,6 +2446,7 @@ footer > a:last-child {
 }
 
 @media (max-width: 900px) {
+  /* Tablet: simplifica a navegação e transforma os grids editoriais em fluxo. */
   .site-header {
     grid-template-columns: 1fr auto;
   }
@@ -2580,6 +2599,7 @@ footer > a:last-child {
 }
 
 @media (max-width: 640px) {
+  /* Smartphone: uma coluna, alvos de toque amplos e tipografia sem extravasar. */
   .hero {
     min-height: 790px;
     height: auto;
@@ -2620,9 +2640,10 @@ footer > a:last-child {
   }
 
   .hero h1 {
-    font-size: clamp(3.35rem, 16vw, 4.45rem);
-    letter-spacing: -0.07em;
-    line-height: 0.8;
+    max-width: 100%;
+    font-size: clamp(3rem, 14.5vw, 4.15rem);
+    letter-spacing: -0.06em;
+    line-height: 0.82;
   }
 
   .hero h1 em {
@@ -2685,6 +2706,11 @@ footer > a:last-child {
   .hero-meta p {
     min-width: 0;
     padding: 0;
+  }
+
+  .hero-meta strong,
+  .hero-meta span {
+    overflow-wrap: anywhere;
   }
 
   .hero-meta p:nth-child(3) {
@@ -2772,6 +2798,8 @@ footer > a:last-child {
   .circuit-map {
     min-height: 500px;
     border-radius: 2px 28px 2px 28px;
+    /* Mantém o mapa arrastável sem aprisionar a rolagem vertical da página. */
+    touch-action: pan-y pinch-zoom;
   }
 
   .circuit-blueprint {
@@ -2861,6 +2889,12 @@ footer > a:last-child {
 
   .option-card {
     min-height: 56px;
+  }
+
+  .map-layer-button,
+  .header-cta,
+  .photo-file-button {
+    min-height: 44px;
   }
 
   .form-actions {
@@ -3006,6 +3040,56 @@ footer > a:last-child {
   .certificate-back {
     grid-column: auto;
     margin-top: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  /* Telefones estreitos: os metadados passam a duas linhas legíveis. */
+  .hero {
+    min-height: 850px;
+  }
+
+  .hero-content {
+    padding-top: 48px;
+    padding-bottom: 270px;
+  }
+
+  .hero-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 12px;
+  }
+
+  .hero-meta p:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .hero-meta p:nth-child(3) strong {
+    white-space: nowrap;
+  }
+
+  .hero-visual figcaption {
+    bottom: 150px;
+  }
+
+  .track-stamp {
+    bottom: 142px;
+  }
+
+  .question-topbar {
+    align-items: flex-start;
+  }
+
+  .question-topbar p {
+    padding-top: 12px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /* Em toque, feedback não depende de estados hover persistentes. */
+  .primary-link:hover,
+  .primary-button:hover,
+  .option-card:hover {
+    transform: none;
   }
 }
 

@@ -106,6 +106,25 @@ Depois acesse `http://localhost:8080`.
 12. Gere o certificado e teste impressão, download e compartilhamento. Bloqueie
     a câmera para validar a mensagem de erro e a alternativa de foto do aparelho.
 
+### Matriz responsiva recomendada
+
+| Perfil | Viewport | Pontos a conferir |
+| --- | --- | --- |
+| Smartphone estreito | `320 × 568` e `390 × 844` | Hero sem corte lateral, metadados em duas linhas, botões com pelo menos 44 px e rolagem vertical sobre o mapa |
+| Tablet | `768 × 1024` | Grids em uma ou duas colunas, questionário sem sobreposição e mapa totalmente visível |
+| Desktop | `1440 × 900` | Navegação completa, hero editorial e cartões alinhados ao limite de conteúdo |
+
+No Chrome/Edge, abra DevTools (`F12`), ative **Toggle device toolbar** e informe
+os viewports acima. No Firefox, use **Responsive Design Mode** (`Ctrl+Shift+M`).
+Faça ao menos uma passagem completa em cada navegador, com zoom de 200%,
+teclado e simulação de toque. Em Safari/iOS, confirme também que a página não
+aplica zoom inesperado aos campos e que o diálogo ocupa a altura visual.
+
+Para avaliar carregamento móvel, execute o Lighthouse com o perfil **Mobile** e
+limpeza de cache. O hero deve selecionar `kartodromo-hero-mobile.webp` até
+640 px (aproximadamente 19 KB), enquanto a imagem histórica deve carregar apenas
+quando se aproxima da viewport.
+
 ## Riscos e próximos ajustes
 
 - Para consolidar respostas de vários visitantes, será necessária uma API com
