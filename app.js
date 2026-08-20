@@ -965,7 +965,7 @@
     function drawPhotoMedallion(context) {
       const centerX = 228;
       const centerY = 666;
-      const radius = 68;
+      const radius = 74;
       const sourceSize = Math.min(photoCanvas.width, photoCanvas.height);
       const sourceX = (photoCanvas.width - sourceSize) / 2;
       const sourceY = (photoCanvas.height - sourceSize) / 2;
