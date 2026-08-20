@@ -2231,6 +2231,71 @@ footer > a:last-child {
   box-shadow: 0 0 0 3px rgba(168, 201, 154, 0.14);
 }
 
+.certificate-rating {
+  display: grid;
+  gap: 9px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.certificate-rating > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.rating-star {
+  color: #f2c94c;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.certificate-rating input[type="range"] {
+  width: 100%;
+  accent-color: var(--terracotta);
+}
+
+.certificate-rating output {
+  min-width: 42px;
+  color: var(--white);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-align: right;
+  text-transform: none;
+}
+
+.certificate-cta-panel {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+
+.certificate-cta-panel h3,
+.certificate-cta-panel p {
+  margin: 0;
+}
+
+.certificate-cta-panel h3 {
+  color: var(--forest);
+  font-family: "Manrope", sans-serif;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+.certificate-cta-panel > p:not(.certificate-cta-icon) {
+  max-width: 38ch;
+  color: var(--ink-soft);
+}
+
+.certificate-cta-icon {
+  color: var(--terracotta);
+  font-size: 2rem;
+  line-height: 1;
+}
+
 .face-confirmation {
   display: flex;
   gap: 9px;
@@ -2298,16 +2363,16 @@ footer > a:last-child {
   position: relative;
   margin: 0;
   padding: 10px;
-  border: 1px solid rgba(49, 92, 59, 0.18);
+  border: 1px solid rgba(18, 63, 115, 0.2);
   background: var(--white);
-  box-shadow: 0 25px 70px rgba(31, 61, 40, 0.14);
+  box-shadow: 0 25px 70px rgba(8, 47, 91, 0.16);
 }
 
 .certificate-result::before {
   position: absolute;
   inset: -7px;
   z-index: -1;
-  border: 1px solid rgba(181, 84, 60, 0.28);
+  border: 1px solid rgba(47, 105, 173, 0.32);
   content: "";
 }
 
@@ -2315,7 +2380,7 @@ footer > a:last-child {
   display: block;
   width: 100%;
   height: auto;
-  background: #f2ebdd;
+  background: #fbfcfe;
 }
 
 .certificate-actions {
