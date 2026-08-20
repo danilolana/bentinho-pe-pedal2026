@@ -568,9 +568,14 @@
     let cameraRequestId = 0;
 
     function updateRatingOutput() {
-      const formattedRating = Number(ratingInput.value)
+      const rating = Number(ratingInput.value);
+      const formattedRating = rating
         .toFixed(1)
         .replace(".", ",");
+      const min = Number(ratingInput.min);
+      const max = Number(ratingInput.max);
+      const progress = ((rating - min) / (max - min)) * 100;
+      ratingInput.style.setProperty("--rating-progress", `${progress}%`);
       ratingOutput.value = `${formattedRating} de 5`;
       ratingOutput.textContent = `${formattedRating} de 5`;
     }
