@@ -998,53 +998,6 @@
       context.stroke();
     }
 
-    function drawSchoolWatermark(context) {
-      context.save();
-      context.translate(1265, 565);
-      context.globalAlpha = 0.055;
-      context.strokeStyle = "#2f69ad";
-      context.fillStyle = "#2f69ad";
-      context.lineWidth = 10;
-      context.beginPath();
-      context.moveTo(-150, -205);
-      context.quadraticCurveTo(0, -250, 150, -205);
-      context.lineTo(126, 70);
-      context.quadraticCurveTo(80, 184, 0, 220);
-      context.quadraticCurveTo(-80, 184, -126, 70);
-      context.closePath();
-      context.stroke();
-      context.lineWidth = 3;
-      context.beginPath();
-      context.moveTo(-121, -180);
-      context.quadraticCurveTo(0, -216, 121, -180);
-      context.lineTo(100, 55);
-      context.quadraticCurveTo(60, 148, 0, 180);
-      context.quadraticCurveTo(-60, 148, -100, 55);
-      context.closePath();
-      context.stroke();
-
-      context.beginPath();
-      context.arc(-15, -74, 25, 0, Math.PI * 2);
-      context.fill();
-      context.lineWidth = 18;
-      context.lineCap = "round";
-      context.beginPath();
-      context.moveTo(-13, -43);
-      context.lineTo(20, 20);
-      context.lineTo(86, 48);
-      context.moveTo(8, -12);
-      context.lineTo(72, -48);
-      context.moveTo(16, 18);
-      context.lineTo(-53, 86);
-      context.moveTo(24, 21);
-      context.lineTo(1, 106);
-      context.stroke();
-      context.font = "700 38px Lora, Georgia, serif";
-      context.textAlign = "center";
-      context.fillText("BENTO QUIRINO", 0, 286);
-      context.restore();
-    }
-
     function drawScoreFrame(context, x, y, width, height) {
       function scorePath(inset) {
         const cut = 22;
@@ -1094,7 +1047,6 @@
       context.fillStyle = paperGlow;
       context.fillRect(0, 0, width, height);
 
-      drawSchoolWatermark(context);
       drawBqWordmark(context);
 
       context.strokeStyle = "#6f9dce";
