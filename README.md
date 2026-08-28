@@ -35,7 +35,11 @@ definidas como fallback.
   animações e responsividade.
 - `app.js`: configuração das perguntas, navegação, validação, persistência,
   câmera, geração local do certificado e interação com o circuito.
+- `assets/certificate/`: componentes oficiais do certificado, referência PNG e
+  fonte gráfica TIFF para impressão.
 - `assets/kartodromo/`: imagens do circuito usadas no hero e no bloco histórico.
+- `tests/certificate-flow.cdp.mjs`: teste ponta a ponta sem dependências que usa
+  o Microsoft Edge instalado e o protocolo de depuração do navegador.
 - `docs/accessibility-image-audit.md`: razões de contraste, tratamento dos
   assets e roteiro de validação.
 - `docs/concept.txt`: documentação conceitual fornecida.
@@ -55,8 +59,12 @@ devem seguir um dos tipos já suportados: `radio`, `checkbox`, `range` ou
   segue o ponto mais próximo do cursor, responde a toque e pode ser conduzido
   pelo teclado.
 - Após a última resposta, a câmera frontal é solicitada para uma foto de
-  chegada. O certificado é desenhado em Canvas com nome e foto, podendo ser
-  impresso, baixado em PNG ou compartilhado pela API nativa do aparelho.
+  chegada. O certificado oficial é desenhado diretamente em Canvas A4
+  horizontal de `3508 × 2480` pixels (300 DPI), com assets pré-carregados e
+  cacheados, podendo ser impresso, baixado em PNG ou compartilhado pela API
+  nativa do aparelho.
+- O PNG de alta resolução é mantido como `Blob` e reutilizado no preview,
+  download, impressão e compartilhamento, evitando cópias grandes em memória.
 - Validação em cada etapa, com mensagens específicas e foco levado ao campo
   problemático.
 - Resumo final criado com `textContent`, evitando injeção de HTML por entradas
@@ -105,6 +113,17 @@ Depois acesse `http://localhost:8080`.
     refaça a foto, preencha o nome e confirme a presença do rosto.
 12. Gere o certificado e teste impressão, download e compartilhamento. Bloqueie
     a câmera para validar a mensagem de erro e a alternativa de foto do aparelho.
+
+O teste automatizado do certificado pressupõe o site em
+`http://127.0.0.1:8080/` e pode ser executado com:
+
+```powershell
+node .\tests\certificate-flow.cdp.mjs
+```
+
+Ele cobre captura de câmera simulada, refazer foto, uploads 3:4 e horizontal,
+os nomes/notas obrigatórios, geração repetida, resolução do PNG, download,
+impressão A4, fallback de compartilhamento, console e preview móvel.
 
 ### Matriz responsiva recomendada
 

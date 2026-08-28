@@ -557,15 +557,84 @@
       };
     }
 
+    const CERTIFICATE_WIDTH = 3508;
+    const CERTIFICATE_HEIGHT = 2480;
+    const CERTIFICATE_NAVY = "#082f5b";
+    const CERTIFICATE_BLUE = "#0a3978";
+    const CERTIFICATE_GOLD = "#c68a17";
+    const CERTIFICATE_PAPER = "#fffefa";
+    const certificateAssetSources = {
+      curves: {
+        src: "assets/certificate/certificate-curves.png",
+        label: "as faixas curvas",
+      },
+      crest: {
+        src: "assets/certificate/bento-crest.png",
+        label: "o brasão institucional",
+      },
+      signature: {
+        src: "assets/certificate/bento-signature.png",
+        label: "a assinatura institucional",
+      },
+      seal: {
+        src: "assets/certificate/bq-wax-seal.png",
+        label: "o selo institucional",
+      },
+      medal: {
+        src: "assets/certificate/score-medal.png",
+        label: "a medalha da nota",
+      },
+    };
+    const certificateAssets = Object.create(null);
+    const certificateAssetPromises = Object.create(null);
     const certificateCanvas = document.createElement("canvas");
-    certificateCanvas.width = 1600;
-    certificateCanvas.height = 1131;
+    certificateCanvas.width = CERTIFICATE_WIDTH;
+    certificateCanvas.height = CERTIFICATE_HEIGHT;
 
     let cameraStream = null;
     let photoDataUrl = "";
-    let certificateDataUrl = "";
+    let certificateBlob = null;
+    let certificateObjectUrl = "";
     let certificateFileName = "certificado-pe-pedal-bentinho-2026.png";
     let cameraRequestId = 0;
+
+    function releaseCertificateOutput() {
+      if (certificateObjectUrl) URL.revokeObjectURL(certificateObjectUrl);
+      certificateBlob = null;
+      certificateObjectUrl = "";
+    }
+
+    function loadImageAsset(key, { src, label }) {
+      if (certificateAssets[key]) return Promise.resolve(certificateAssets[key]);
+      if (certificateAssetPromises[key]) return certificateAssetPromises[key];
+
+      certificateAssetPromises[key] = new Promise((resolve, reject) => {
+        const image = new Image();
+        image.decoding = "async";
+        image.addEventListener("load", () => {
+          certificateAssets[key] = image;
+          resolve(image);
+        }, { once: true });
+        image.addEventListener("error", () => {
+          delete certificateAssetPromises[key];
+          const error = new Error(`Falha ao carregar ${label}.`);
+          error.certificateAssetLabel = label;
+          reject(error);
+        }, { once: true });
+        image.src = src;
+      });
+
+      return certificateAssetPromises[key];
+    }
+
+    async function preloadCertificateAssets() {
+      await Promise.all(
+        Object.entries(certificateAssetSources).map(([key, asset]) =>
+          loadImageAsset(key, asset),
+        ),
+      );
+      return certificateAssets;
+    }
 
     function updateRatingOutput() {
       const rating = Number(ratingInput.value);
@@ -664,12 +733,21 @@
       }
     }
 
-    function drawCoverImage(context, source, mirror = false) {
+    function drawImageCover(
+      context,
+      source,
+      targetX,
+      targetY,
+      targetWidth,
+      targetHeight,
+      mirror = false,
+    ) {
       const sourceWidth = source.videoWidth || source.naturalWidth || source.width;
       const sourceHeight =
         source.videoHeight || source.naturalHeight || source.height;
-      const targetWidth = photoCanvas.width;
-      const targetHeight = photoCanvas.height;
+      if (!sourceWidth || !sourceHeight || !targetWidth || !targetHeight) {
+        return false;
+      }
       const sourceRatio = sourceWidth / sourceHeight;
       const targetRatio = targetWidth / targetHeight;
       let cropWidth = sourceWidth;
@@ -686,9 +764,8 @@
       }
 
       context.save();
-      context.clearRect(0, 0, targetWidth, targetHeight);
       if (mirror) {
-        context.translate(targetWidth, 0);
+        context.translate(targetX + targetWidth, targetY);
         context.scale(-1, 1);
       }
       context.drawImage(
@@ -697,12 +774,31 @@
         cropY,
         cropWidth,
         cropHeight,
-        0,
-        0,
+        mirror ? 0 : targetX,
+        mirror ? 0 : targetY,
         targetWidth,
         targetHeight,
       );
       context.restore();
+      return true;
+    }
+
+    function drawImageContain(context, source, x, y, width, height) {
+      const sourceWidth = source.naturalWidth || source.width;
+      const sourceHeight = source.naturalHeight || source.height;
+      if (!sourceWidth || !sourceHeight || !width || !height) return false;
+
+      const scale = Math.min(width / sourceWidth, height / sourceHeight);
+      const drawWidth = sourceWidth * scale;
+      const drawHeight = sourceHeight * scale;
+      context.drawImage(
+        source,
+        x + (width - drawWidth) / 2,
+        y + (height - drawHeight) / 2,
+        drawWidth,
+        drawHeight,
+      );
+      return true;
     }
 
     function showCapturedPhoto() {
@@ -729,7 +825,16 @@
       }
 
       const context = photoCanvas.getContext("2d", { alpha: false });
-      drawCoverImage(context, video, true);
+      context.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
+      drawImageCover(
+        context,
+        video,
+        0,
+        0,
+        photoCanvas.width,
+        photoCanvas.height,
+        true,
+      );
       showCapturedPhoto();
     }
 
@@ -755,7 +860,15 @@
           image.src = objectUrl;
         });
         const context = photoCanvas.getContext("2d", { alpha: false });
-        drawCoverImage(context, image, false);
+        context.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
+        drawImageCover(
+          context,
+          image,
+          0,
+          0,
+          photoCanvas.width,
+          photoCanvas.height,
+        );
         showCapturedPhoto();
       } catch (error) {
         console.warn("Não foi possível ler a foto escolhida.", error);
@@ -768,7 +881,7 @@
 
     function resetCapture() {
       photoDataUrl = "";
-      certificateDataUrl = "";
+      releaseCertificateOutput();
       photoCanvas
         .getContext("2d")
         .clearRect(0, 0, photoCanvas.width, photoCanvas.height);
@@ -787,370 +900,310 @@
       requestCamera();
     }
 
-    function fitNameFont(context, name, maxWidth) {
-      let fontSize = 68;
-      do {
-        context.font = `600 ${fontSize}px Lora, Georgia, serif`;
-        fontSize -= 2;
-      } while (context.measureText(name).width > maxWidth && fontSize > 34);
+    function drawDiamond(context, x, y, width = 24, height = width) {
+      context.beginPath();
+      context.moveTo(x, y - height / 2);
+      context.lineTo(x + width / 2, y);
+      context.lineTo(x, y + height / 2);
+      context.lineTo(x - width / 2, y);
+      context.closePath();
+      context.fill();
     }
 
-    function drawCertificateFrame(context, width, height) {
-      function framePath(inset, corner) {
-        context.beginPath();
-        context.moveTo(inset + corner, inset);
-        context.lineTo(width - inset - corner, inset);
-        context.quadraticCurveTo(
-          width - inset - 5,
-          inset + 5,
-          width - inset,
-          inset + corner,
-        );
-        context.lineTo(width - inset, height - inset - corner);
-        context.quadraticCurveTo(
-          width - inset - 5,
-          height - inset - 5,
-          width - inset - corner,
-          height - inset,
-        );
-        context.lineTo(inset + corner, height - inset);
-        context.quadraticCurveTo(
-          inset + 5,
-          height - inset - 5,
-          inset,
-          height - inset - corner,
-        );
-        context.lineTo(inset, inset + corner);
-        context.quadraticCurveTo(inset + 5, inset + 5, inset + corner, inset);
-        context.closePath();
+    function drawTrackedText(context, text, centerX, y, tracking) {
+      const characters = [...text];
+      const textWidth = characters.reduce(
+        (total, character) => total + context.measureText(character).width,
+        tracking * Math.max(0, characters.length - 1),
+      );
+      let x = centerX - textWidth / 2;
+      const previousAlignment = context.textAlign;
+      context.textAlign = "left";
+      characters.forEach((character) => {
+        context.fillText(character, x, y);
+        x += context.measureText(character).width + tracking;
+      });
+      context.textAlign = previousAlignment;
+    }
+
+    function fitParticipantName(context, name, maxWidth) {
+      const maximumSize = 194;
+      const minimumSize = 88;
+      let fontSize = maximumSize;
+
+      while (fontSize > minimumSize) {
+        context.font = `400 ${fontSize}px "Great Vibes", "Segoe Script", cursive`;
+        if (context.measureText(name).width <= maxWidth) break;
+        fontSize -= 4;
       }
 
-      context.save();
-      context.strokeStyle = "#082f5b";
-      context.lineWidth = 4;
-      framePath(18, 42);
-      context.stroke();
-      context.strokeStyle = "#2f69ad";
-      context.lineWidth = 1.7;
-      framePath(29, 34);
-      context.stroke();
-      context.strokeStyle = "#6f9dce";
-      context.lineWidth = 1;
-      framePath(36, 27);
-      context.stroke();
-      context.restore();
+      context.font = `400 ${Math.max(fontSize, minimumSize)}px "Great Vibes", "Segoe Script", cursive`;
+      return Math.max(fontSize, minimumSize);
     }
 
-    function drawCertificateCorners(context, width, height) {
-      const navyGradient = context.createLinearGradient(0, height, 245, 900);
-      navyGradient.addColorStop(0, "#082f5b");
-      navyGradient.addColorStop(1, "#174a80");
+    function drawCertificateBorder(context) {
+      const left = 190;
+      const right = CERTIFICATE_WIDTH - 190;
+      const top = 64;
+      const bottom = CERTIFICATE_HEIGHT - 136;
 
       context.save();
-      context.fillStyle = "#082f5b";
-      context.beginPath();
-      context.moveTo(18, 18);
-      context.lineTo(72, 18);
-      context.quadraticCurveTo(68, 62, 18, 70);
-      context.closePath();
-      context.fill();
-      context.beginPath();
-      context.moveTo(width - 18, 18);
-      context.lineTo(width - 72, 18);
-      context.quadraticCurveTo(width - 68, 62, width - 18, 70);
-      context.closePath();
-      context.fill();
-      context.beginPath();
-      context.moveTo(width - 18, height - 18);
-      context.lineTo(width - 67, height - 18);
-      context.quadraticCurveTo(width - 63, height - 58, width - 18, height - 68);
-      context.closePath();
-      context.fill();
-
-      context.fillStyle = navyGradient;
-      context.beginPath();
-      context.moveTo(0, 790);
-      context.lineTo(0, height);
-      context.lineTo(240, height);
-      context.closePath();
-      context.fill();
-      context.fillStyle = "#2f69ad";
-      context.beginPath();
-      context.moveTo(0, 902);
-      context.lineTo(0, height);
-      context.lineTo(172, height);
-      context.closePath();
-      context.fill();
-      context.fillStyle = "#6f9dce";
-      context.beginPath();
-      context.moveTo(0, 972);
-      context.lineTo(0, height);
-      context.lineTo(110, height);
-      context.closePath();
-      context.fill();
-      context.strokeStyle = "#fbfcfe";
-      context.lineWidth = 4;
-      context.beginPath();
-      context.moveTo(0, 840);
-      context.lineTo(208, height);
-      context.stroke();
-      context.restore();
-    }
-
-    function drawDiamondDivider(context, centerX, y, width) {
-      context.save();
-      context.strokeStyle = "#2f69ad";
-      context.lineWidth = 1.3;
-      context.beginPath();
-      context.moveTo(centerX - width / 2, y);
-      context.lineTo(centerX - 14, y);
-      context.moveTo(centerX + 14, y);
-      context.lineTo(centerX + width / 2, y);
-      context.stroke();
-      context.fillStyle = "#123f73";
-      context.translate(centerX, y);
-      context.rotate(Math.PI / 4);
-      context.fillRect(-7, -7, 14, 14);
-      context.restore();
-    }
-
-    function drawBqWordmark(context) {
-      context.save();
-      context.textAlign = "center";
-      context.fillStyle = "#082f5b";
-      context.font = "900 112px Arial Black, Impact, sans-serif";
-      context.fillText("BQ", 228, 230);
-      context.font = "500 25px Inter, Arial, sans-serif";
-      context.letterSpacing = "7px";
-      context.fillText("COLÉGIO TÉCNICO", 228, 310);
-      context.letterSpacing = "0px";
-      context.font = "700 37px Manrope, Arial, sans-serif";
-      context.fillText("Bento Quirino", 228, 355);
-      context.fillStyle = "#123f73";
-      context.fillRect(82, 372, 292, 2);
-      context.font = "700 14px Lora, Georgia, serif";
-      context.fillText("FORMANDO GERAÇÕES DESDE 1910", 228, 395);
-      context.restore();
-    }
-
-    function drawBicycle(context, centerX, y) {
-      context.save();
-      context.strokeStyle = "#2f69ad";
-      context.fillStyle = "#2f69ad";
+      context.strokeStyle = CERTIFICATE_GOLD;
+      context.fillStyle = CERTIFICATE_GOLD;
       context.lineWidth = 5;
+      context.strokeRect(left, top, right - left, bottom - top);
+      context.globalAlpha = 0.4;
+      context.lineWidth = 2;
+      context.strokeRect(left - 18, top - 18, right - left + 36, bottom - top + 36);
+      context.globalAlpha = 1;
+      drawDiamond(context, CERTIFICATE_WIDTH / 2, top, 34, 72);
+      drawDiamond(context, CERTIFICATE_WIDTH / 2, bottom, 34, 72);
+      drawDiamond(context, left, (top + bottom) / 2, 34, 72);
+      drawDiamond(context, right, (top + bottom) / 2, 34, 72);
+      context.restore();
+    }
+
+    function drawCertificateBackground(context) {
+      context.fillStyle = CERTIFICATE_PAPER;
+      context.fillRect(0, 0, CERTIFICATE_WIDTH, CERTIFICATE_HEIGHT);
+
+      const curveWidth = 1450;
+      const curveHeight = 1275;
+      drawImageContain(
+        context,
+        certificateAssets.curves,
+        0,
+        0,
+        curveWidth,
+        curveHeight,
+      );
+
+      context.save();
+      context.translate(CERTIFICATE_WIDTH, CERTIFICATE_HEIGHT);
+      context.rotate(Math.PI);
+      drawImageContain(
+        context,
+        certificateAssets.curves,
+        0,
+        0,
+        curveWidth,
+        curveHeight,
+      );
+      context.restore();
+    }
+
+    function drawCertificateWatermarks(context) {
+      context.save();
+      context.globalCompositeOperation = "multiply";
+      context.globalAlpha = 0.055;
+      drawImageContain(context, certificateAssets.crest, 2700, 220, 940, 1010);
+      context.globalAlpha = 0.065;
+      drawImageContain(context, certificateAssets.crest, -260, 1530, 760, 815);
+      context.restore();
+    }
+
+    function drawHeaderBicycle(context, centerX, centerY) {
+      const scale = 1.25;
+      context.save();
+      context.translate(centerX, centerY);
+      context.scale(scale, scale);
+      context.strokeStyle = CERTIFICATE_GOLD;
+      context.lineWidth = 6;
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.arc(centerX - 48, y + 25, 32, 0, Math.PI * 2);
-      context.arc(centerX + 51, y + 25, 32, 0, Math.PI * 2);
-      context.moveTo(centerX - 48, y + 25);
-      context.lineTo(centerX - 13, y - 28);
-      context.lineTo(centerX + 13, y + 25);
-      context.lineTo(centerX - 48, y + 25);
-      context.lineTo(centerX + 3, y + 25);
-      context.lineTo(centerX + 38, y - 20);
-      context.lineTo(centerX + 51, y + 25);
-      context.moveTo(centerX - 24, y - 28);
-      context.lineTo(centerX - 5, y - 28);
-      context.moveTo(centerX + 30, y - 20);
-      context.lineTo(centerX + 52, y - 27);
-      context.stroke();
-      context.lineWidth = 2;
-      context.beginPath();
-      context.moveTo(centerX - 104, y + 7);
-      context.lineTo(centerX - 66, y + 7);
-      context.moveTo(centerX - 124, y + 24);
-      context.lineTo(centerX - 80, y + 24);
-      context.moveTo(centerX - 106, y + 41);
-      context.lineTo(centerX - 68, y + 41);
+      context.arc(-43, 24, 29, 0, Math.PI * 2);
+      context.arc(47, 24, 29, 0, Math.PI * 2);
+      context.moveTo(-43, 24);
+      context.lineTo(-12, -24);
+      context.lineTo(13, 24);
+      context.lineTo(-43, 24);
+      context.lineTo(2, 24);
+      context.lineTo(34, -18);
+      context.lineTo(47, 24);
+      context.moveTo(-22, -24);
+      context.lineTo(-4, -24);
+      context.moveTo(27, -18);
+      context.lineTo(47, -24);
       context.stroke();
       context.restore();
     }
 
-    function drawPhotoMedallion(context) {
-      const centerX = 228;
-      const centerY = 666;
-      const radius = 74;
-      const sourceSize = Math.min(photoCanvas.width, photoCanvas.height);
-      const sourceX = (photoCanvas.width - sourceSize) / 2;
-      const sourceY = (photoCanvas.height - sourceSize) / 2;
+    function drawCertificateHeader(context) {
+      const centerX = CERTIFICATE_WIDTH / 2;
+      context.save();
+      context.textAlign = "center";
+      context.textBaseline = "alphabetic";
+      context.fillStyle = CERTIFICATE_NAVY;
+      context.font = '500 178px Lora, Georgia, serif';
+      drawTrackedText(context, "CERTIFICADO", centerX, 356, 15);
+
+      context.font = '700 112px Oswald, "Arial Narrow", sans-serif';
+      context.fillText("PÉ PEDAL", centerX, 510);
+
+      context.strokeStyle = CERTIFICATE_GOLD;
+      context.fillStyle = CERTIFICATE_GOLD;
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(1050, 530);
+      context.lineTo(1370, 530);
+      context.moveTo(2140, 530);
+      context.lineTo(2380, 530);
+      context.stroke();
+      drawDiamond(context, 1370, 530, 20, 36);
+      drawDiamond(context, 2140, 530, 20, 36);
+
+      context.fillStyle = CERTIFICATE_BLUE;
+      context.font = '700 170px Oswald, "Arial Narrow", sans-serif';
+      context.fillText("BENTINHO", 1690, 705);
+      drawHeaderBicycle(context, 2315, 646);
+
+      context.strokeStyle = CERTIFICATE_GOLD;
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(1180, 770);
+      context.lineTo(1692, 770);
+      context.moveTo(1816, 770);
+      context.lineTo(2328, 770);
+      context.stroke();
+      context.fillStyle = CERTIFICATE_BLUE;
+      drawDiamond(context, centerX, 770, 60, 60);
+      context.beginPath();
+      context.moveTo(1692, 770);
+      context.lineTo(centerX, 805);
+      context.lineTo(1816, 770);
+      context.fill();
+      context.restore();
+    }
+
+    function drawParticipantName(context, name) {
+      const centerX = CERTIFICATE_WIDTH / 2;
+      context.save();
+      context.textAlign = "center";
+      context.fillStyle = CERTIFICATE_NAVY;
+      context.font = 'italic 600 43px Lora, Georgia, serif';
+      context.fillText("Parabéns!", centerX, 955);
+
+      fitParticipantName(context, name, 1740);
+      context.fillText(name, centerX, 1235);
+
+      context.strokeStyle = CERTIFICATE_GOLD;
+      context.fillStyle = CERTIFICATE_GOLD;
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(870, 1320);
+      context.lineTo(2638, 1320);
+      context.stroke();
+      drawDiamond(context, centerX, 1320, 24, 34);
+
+      context.fillStyle = CERTIFICATE_NAVY;
+      context.font = '600 48px Manrope, Inter, Arial, sans-serif';
+      context.fillText("Você agora é um Guardião do Parque.", centerX, 1435);
+      context.restore();
+    }
+
+    function drawParticipantPhoto(context) {
+      const x = 305;
+      const y = 1500;
+      const width = 540;
+      const height = 720;
+      const mat = 12;
 
       context.save();
-      context.beginPath();
-      context.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      context.clip();
-      context.drawImage(
+      context.fillStyle = CERTIFICATE_PAPER;
+      context.fillRect(x, y, width, height);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      const hasPhoto = drawImageCover(
+        context,
         photoCanvas,
-        sourceX,
-        sourceY,
-        sourceSize,
-        sourceSize,
-        centerX - radius,
-        centerY - radius,
-        radius * 2,
-        radius * 2,
+        x + mat,
+        y + mat,
+        width - mat * 2,
+        height - mat * 2,
       );
-      context.restore();
-      context.strokeStyle = "#fbfcfe";
-      context.lineWidth = 7;
-      context.beginPath();
-      context.arc(centerX, centerY, radius + 3, 0, Math.PI * 2);
-      context.stroke();
-      context.strokeStyle = "#2f69ad";
-      context.lineWidth = 3;
-      context.beginPath();
-      context.arc(centerX, centerY, radius + 9, 0, Math.PI * 2);
-      context.stroke();
-    }
 
-    function drawScoreFrame(context, x, y, width, height) {
-      function scorePath(inset) {
-        const cut = 22;
-        context.beginPath();
-        context.moveTo(x + inset + cut, y + inset);
-        context.lineTo(x + width - inset - cut, y + inset);
-        context.lineTo(x + width - inset, y + inset + cut);
-        context.lineTo(x + width - inset, y + height - inset - cut);
-        context.lineTo(x + width - inset - cut, y + height - inset);
-        context.lineTo(x + inset + cut, y + height - inset);
-        context.lineTo(x + inset, y + height - inset - cut);
-        context.lineTo(x + inset, y + inset + cut);
-        context.closePath();
+      if (!hasPhoto) {
+        context.fillStyle = "#f3f4f4";
+        context.fillRect(x + mat, y + mat, width - mat * 2, height - mat * 2);
+        context.fillStyle = "#8a9198";
+        context.textAlign = "center";
+        context.font = "500 30px Inter, Arial, sans-serif";
+        context.fillText("Foto indisponível", x + width / 2, y + height / 2);
       }
 
+      context.strokeStyle = CERTIFICATE_GOLD;
+      context.lineWidth = 6;
+      context.strokeRect(x, y, width, height);
+      context.restore();
+    }
+
+    function drawScore(context, rating) {
+      const centerX = 1110;
+      const formattedRating = rating.toFixed(1).replace(".", ",");
       context.save();
-      context.fillStyle = "rgba(232, 240, 248, 0.5)";
-      scorePath(0);
-      context.fill();
-      context.strokeStyle = "#123f73";
-      context.lineWidth = 4;
+      context.textAlign = "center";
+      context.fillStyle = CERTIFICATE_GOLD;
+      context.font = '600 43px Lora, Georgia, serif';
+      context.fillText("Nota:", centerX, 1605);
+      context.globalCompositeOperation = "multiply";
+      drawImageContain(context, certificateAssets.medal, 1005, 1640, 210, 285);
+      context.globalCompositeOperation = "source-over";
+      context.font = '500 94px Lora, Georgia, serif';
+      context.fillText(formattedRating, centerX, 2055);
+      context.restore();
+    }
+
+    function drawInstitutionalSeal(context) {
+      context.save();
+      context.globalCompositeOperation = "multiply";
+      drawImageContain(context, certificateAssets.seal, 2680, 1510, 610, 610);
+      context.restore();
+    }
+
+    function drawInstitutionalSignature(context) {
+      const centerX = 1840;
+      context.save();
+      context.globalCompositeOperation = "multiply";
+      drawImageContain(context, certificateAssets.signature, 1420, 1970, 840, 280);
+      context.globalCompositeOperation = "source-over";
+      context.strokeStyle = CERTIFICATE_NAVY;
+      context.lineWidth = 3;
+      context.beginPath();
+      context.moveTo(1450, 2200);
+      context.lineTo(2230, 2200);
       context.stroke();
-      context.strokeStyle = "#6f9dce";
-      context.lineWidth = 1.5;
-      scorePath(8);
-      context.stroke();
+      context.textAlign = "center";
+      context.fillStyle = CERTIFICATE_NAVY;
+      context.font = '700 39px Manrope, Inter, Arial, sans-serif';
+      context.fillText("Colégio Técnico Bento Quirino", centerX, 2258);
+      context.font = '500 33px Manrope, Inter, Arial, sans-serif';
+      context.fillText("Formando gerações desde 1910", centerX, 2310);
       context.restore();
     }
 
     async function drawCertificate(name, rating) {
-      await document.fonts?.ready;
+      await Promise.all([document.fonts?.ready, preloadCertificateAssets()]);
       const context = certificateCanvas.getContext("2d", { alpha: false });
-      const width = certificateCanvas.width;
-      const height = certificateCanvas.height;
-      const date = new Intl.DateTimeFormat("pt-BR", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      }).format(new Date());
+      if (!context) throw new Error("Canvas 2D indisponível.");
 
-      context.fillStyle = "#fbfcfe";
-      context.fillRect(0, 0, width, height);
+      context.clearRect(0, 0, CERTIFICATE_WIDTH, CERTIFICATE_HEIGHT);
+      drawCertificateBackground(context);
+      drawCertificateWatermarks(context);
+      drawCertificateHeader(context);
+      drawParticipantName(context, name);
+      drawParticipantPhoto(context);
+      drawScore(context, rating);
+      drawInstitutionalSeal(context);
+      drawInstitutionalSignature(context);
+      drawCertificateBorder(context);
 
-      const paperGlow = context.createRadialGradient(960, 520, 40, 960, 520, 900);
-      paperGlow.addColorStop(0, "rgba(255,255,255,0)");
-      paperGlow.addColorStop(1, "rgba(232,240,248,0.42)");
-      context.fillStyle = paperGlow;
-      context.fillRect(0, 0, width, height);
-
-      drawBqWordmark(context);
-
-      context.strokeStyle = "#6f9dce";
-      context.lineWidth = 1.4;
-      context.beginPath();
-      context.moveTo(454, 54);
-      context.lineTo(454, height - 54);
-      context.stroke();
-
-      drawDiamondDivider(context, 228, 462, 292);
-      context.fillStyle = "#0a2850";
-      context.textAlign = "center";
-      context.font = "600 22px Inter, Arial, sans-serif";
-      context.fillText("CERTIFICADO DE", 228, 520);
-      context.fillText("PARTICIPAÇÃO", 228, 556);
-      drawDiamondDivider(context, 228, 590, 292);
-
-      drawPhotoMedallion(context);
-      context.fillStyle = "#6b7d92";
-      context.font = "600 12px Inter, Arial, sans-serif";
-      context.letterSpacing = "2px";
-      context.fillText("REGISTRO DO PARTICIPANTE", 228, 765);
-      context.letterSpacing = "0px";
-
-      drawBicycle(context, 228, 805);
-      context.fillStyle = "#0a2850";
-      context.font = "600 52px Lora, Georgia, serif";
-      context.fillText("Pé Pedal", 228, 915);
-      context.fillStyle = "#2f69ad";
-      context.font = "600 50px Lora, Georgia, serif";
-      context.fillText("Bentinho", 228, 970);
-      drawDiamondDivider(context, 228, 1005, 292);
-
-      const mainCenterX = 1010;
-      const titleGradient = context.createLinearGradient(585, 0, 1400, 0);
-      titleGradient.addColorStop(0, "#071f42");
-      titleGradient.addColorStop(0.55, "#123f73");
-      titleGradient.addColorStop(1, "#071f42");
-
-      context.textAlign = "center";
-      context.fillStyle = titleGradient;
-      context.font = "500 94px Lora, Georgia, serif";
-      context.letterSpacing = "10px";
-      context.fillText("CERTIFICADO", mainCenterX, 205);
-      context.letterSpacing = "0px";
-      drawDiamondDivider(context, mainCenterX, 250, 455);
-
-      context.fillStyle = "#0a2850";
-      context.font = "500 28px Inter, Arial, sans-serif";
-      context.fillText("Certificamos que", mainCenterX, 326);
-
-      context.fillStyle = titleGradient;
-      fitNameFont(context, name.toUpperCase(), 930);
-      context.fillText(name.toUpperCase(), mainCenterX, 430);
-      context.strokeStyle = "#2f69ad";
-      context.lineWidth = 2;
-      context.beginPath();
-      context.moveTo(530, 468);
-      context.lineTo(1490, 468);
-      context.stroke();
-
-      context.fillStyle = "#0a2850";
-      context.font = "400 28px Inter, Arial, sans-serif";
-      context.fillText("participou do evento escolar", mainCenterX, 535);
-
-      context.fillStyle = "#2f69ad";
-      context.font = "600 78px Lora, Georgia, serif";
-      context.fillText("Pé Pedal Bentinho", mainCenterX, 646);
-
-      context.fillStyle = "#0a2850";
-      context.font = "400 27px Inter, Arial, sans-serif";
-      context.fillText("e atribuiu a seguinte nota:", mainCenterX, 718);
-
-      drawScoreFrame(context, 755, 760, 510, 118);
-      const formattedRating = rating.toFixed(1).replace(".", ",");
-      context.fillStyle = titleGradient;
-      context.font = "600 58px Lora, Georgia, serif";
-      context.fillText(`NOTA: ${formattedRating}`, mainCenterX, 838);
-
-      context.strokeStyle = "rgba(47, 105, 173, 0.42)";
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(590, 963);
-      context.lineTo(1430, 963);
-      context.stroke();
-      context.fillStyle = "#536c87";
-      context.font = "600 14px Inter, Arial, sans-serif";
-      context.letterSpacing = "2px";
-      context.textAlign = "left";
-      context.fillText(`CAMPINAS · ${date.toUpperCase()}`, 590, 1002);
-      context.textAlign = "right";
-      context.fillText("COLÉGIO TÉCNICO BENTO QUIRINO · 2026", 1430, 1002);
-      context.letterSpacing = "0px";
-
-      drawCertificateFrame(context, width, height);
-      drawCertificateCorners(context, width, height);
-
-      certificateDataUrl = certificateCanvas.toDataURL("image/png");
-      certificateImage.src = certificateDataUrl;
+      releaseCertificateOutput();
+      certificateBlob = await canvasToBlob();
+      certificateObjectUrl = URL.createObjectURL(certificateBlob);
+      certificateImage.src = certificateObjectUrl;
+      certificateImage.dataset.canvasWidth = String(certificateCanvas.width);
+      certificateImage.dataset.canvasHeight = String(certificateCanvas.height);
       certificateFileName = `certificado-${name
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -1170,16 +1223,16 @@
     }
 
     function downloadCertificate() {
-      if (!certificateDataUrl) return;
+      if (!certificateObjectUrl) return;
       const link = document.createElement("a");
-      link.href = certificateDataUrl;
+      link.href = certificateObjectUrl;
       link.download = certificateFileName;
       link.click();
       showToast("Certificado baixado em PNG.");
     }
 
     function printCertificate() {
-      if (!certificateDataUrl) return;
+      if (!certificateObjectUrl) return;
       const printFrame = document.createElement("iframe");
       printFrame.title = "Impressão do certificado";
       printFrame.style.position = "fixed";
@@ -1192,10 +1245,10 @@
       const frameDocument = printFrame.contentDocument;
       const style = frameDocument.createElement("style");
       style.textContent =
-        "@page{size:A4 landscape;margin:0}html,body{margin:0;width:100%;height:100%;display:grid;place-items:center;background:#fff}img{width:100%;height:100%;object-fit:contain}";
+        "@page{size:A4 landscape;margin:0}html,body{margin:0;padding:0;width:297mm;height:210mm;overflow:hidden;background:#fff}body{display:grid;place-items:center}img{display:block;width:297mm;height:210mm;object-fit:contain;print-color-adjust:exact;-webkit-print-color-adjust:exact}";
       const image = frameDocument.createElement("img");
       image.alt = "Certificado Pé Pedal Bentinho 2026";
-      image.src = certificateDataUrl;
+      image.src = certificateObjectUrl;
       frameDocument.head.append(style);
       frameDocument.body.append(image);
       image.addEventListener("load", () => {
@@ -1206,11 +1259,10 @@
     }
 
     async function shareCertificate() {
-      if (!certificateDataUrl) return;
+      if (!certificateBlob) return;
 
       try {
-        const blob = await canvasToBlob();
-        const file = new File([blob], certificateFileName, {
+        const file = new File([certificateBlob], certificateFileName, {
           type: "image/png",
         });
 
@@ -1259,6 +1311,13 @@
         return;
       }
 
+      if (!photoDataUrl) {
+        certificateError.textContent =
+          "Tire uma foto ou escolha uma imagem do aparelho para continuar.";
+        certificateError.hidden = false;
+        return;
+      }
+
       certificateError.hidden = true;
       const submitButton = detailsForm.querySelector('button[type="submit"]');
       submitButton.disabled = true;
@@ -1272,8 +1331,9 @@
         certificateStep.querySelector("h2")?.focus?.();
       } catch (error) {
         console.error("Não foi possível gerar o certificado.", error);
-        certificateError.textContent =
-          "Não foi possível gerar o certificado neste aparelho. Tente novamente.";
+        certificateError.textContent = error?.certificateAssetLabel
+          ? `Não foi possível carregar ${error.certificateAssetLabel}. Recarregue a página e tente novamente.`
+          : "Não foi possível gerar o certificado neste aparelho. Tente novamente.";
         certificateError.hidden = false;
       } finally {
         submitButton.disabled = false;
@@ -1286,7 +1346,7 @@
       if (!dialog.open) dialog.showModal();
       document.body.classList.add("has-open-dialog");
 
-      if (certificateDataUrl) {
+      if (certificateObjectUrl) {
         cameraStep.hidden = true;
         certificateStep.hidden = false;
         return;
@@ -1306,7 +1366,7 @@
     function reset() {
       stopCamera();
       photoDataUrl = "";
-      certificateDataUrl = "";
+      releaseCertificateOutput();
       certificateFileName = "certificado-pe-pedal-bentinho-2026.png";
       detailsForm.reset();
       updateRatingOutput();
@@ -1349,7 +1409,14 @@
       stopCamera();
       document.body.classList.remove("has-open-dialog");
     });
-    window.addEventListener("pagehide", stopCamera);
+    window.addEventListener("pagehide", () => {
+      stopCamera();
+      releaseCertificateOutput();
+    });
+
+    preloadCertificateAssets().catch((error) => {
+      console.warn("Os assets do certificado serão carregados novamente na geração.", error);
+    });
 
     return { open, reset };
   }
