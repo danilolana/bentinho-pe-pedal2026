@@ -932,12 +932,12 @@
       let fontSize = maximumSize;
 
       while (fontSize > minimumSize) {
-        context.font = `400 ${fontSize}px "Great Vibes", "Segoe Script", cursive`;
+        context.font = `400 ${fontSize}px "Pinyon Script", "Segoe Script", cursive`;
         if (context.measureText(name).width <= maxWidth) break;
         fontSize -= 4;
       }
 
-      context.font = `400 ${Math.max(fontSize, minimumSize)}px "Great Vibes", "Segoe Script", cursive`;
+      context.font = `400 ${Math.max(fontSize, minimumSize)}px "Pinyon Script", "Segoe Script", cursive`;
       return Math.max(fontSize, minimumSize);
     }
 
